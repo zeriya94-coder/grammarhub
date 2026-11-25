@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Pixel Robot Grammar Quest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Pixelify+Sans:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: arcade cabinet — bold, cute, neon, readable on a classroom projector
+   IDEA: an 8-bit platformer cartridge; each level is a world with its own grammar topic
+   PICTURE: the live pixel game itself fills the screen (robot, ? blocks, pink bots, portal)
+   COLOUR+TYPE: night navy, gold ? blocks, cyan/pink/lime neon; Press Start 2P labels, Pixelify Sans questions
+   LAYOUT: HUD bar, auto-fit 16:9 stage (no scrolling), full-screen pixel panels for menus and questions */
+:root{--gold:#ffd23f;--cyan:#5ef2ff;--pink:#ff7ab8;--lime:#b8ff5e;--red:#ff4d6d;--navy:#141a3a;color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;height:100%;background:#05081c;color:#fff;overflow:hidden;font-family:'Pixelify Sans',system-ui,sans-serif;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+#app{position:fixed;inset:0;display:flex;flex-direction:column}
+#hud{display:flex;gap:clamp(6px,1.6vmin,20px);align-items:center;justify-content:space-between;flex-wrap:wrap;padding:clamp(4px,1vmin,10px) clamp(8px,2vmin,22px);background:var(--navy);border-bottom:4px solid #000;font-family:'Press Start 2P',monospace;font-size:clamp(9px,2vmin,20px)}
+#hud span{white-space:nowrap}
+#hLv{color:var(--cyan)}#hStar{color:var(--gold)}#hHeart{color:var(--red);letter-spacing:.08em}#hScore{color:var(--lime)}
+.mini{font:inherit;background:#2b3466;color:#fff;border:3px solid #000;min-width:44px;min-height:40px;cursor:pointer;margin-left:6px}
+#stage{flex:1;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#cv{image-rendering:pixelated;image-rendering:crisp-edges;display:block;box-shadow:0 0 0 4px #000}
+#toast{position:absolute;top:7%;left:50%;transform:translateX(-50%);font-family:'Press Start 2P',monospace;font-size:clamp(10px,2.4vmin,24px);line-height:1.5;background:#000d;color:var(--gold);padding:.7em 1em;border:3px solid var(--gold);opacity:0;transition:opacity .3s;pointer-events:none;text-align:center;max-width:92%}
+#toast.on{opacity:1}
+#pad{position:absolute;left:0;right:0;bottom:0;display:none;justify-content:space-between;align-items:flex-end;padding:12px;pointer-events:none}
+body.touch #pad{display:flex}
+#pad.hide{display:none!important}
+#pad button{pointer-events:auto;width:clamp(58px,14vmin,92px);height:clamp(58px,14vmin,92px);font-family:'Press Start 2P',monospace;font-size:clamp(14px,3vmin,22px);background:#ffffff2e;color:#fff;border:3px solid #fff;border-radius:14px;touch-action:none;margin-right:10px}
+#pad .pj{background:#ffd23f66;width:clamp(76px,19vmin,116px);font-size:clamp(10px,2.2vmin,16px);margin:0}
+#pad button.down{background:#ffffff80}
+.screen{position:fixed;inset:0;z-index:10;display:none;align-items:center;justify-content:center;padding:clamp(10px,3vmin,30px);background:rgba(5,8,28,.55);overflow:auto}
+.screen.on{display:flex}
+.panel{background:#141a3af0;border:4px solid #fff;box-shadow:0 0 0 4px #000,10px 10px 0 4px #000;padding:clamp(14px,3.5vmin,40px);width:min(100%,1000px);margin:auto}
+h1,h2{font-family:'Press Start 2P',monospace;margin:0 0 .6em;line-height:1.35;text-shadow:4px 4px 0 #000;text-wrap:balance}
+h1{font-size:clamp(20px,5.2vmin,54px);color:var(--cyan)}h1 span{color:var(--gold)}
+h2{font-size:clamp(16px,4vmin,40px);color:var(--gold)}
+.btn{font-family:'Press Start 2P',monospace;font-size:clamp(11px,2.2vmin,22px);padding:.9em 1.2em;background:var(--gold);color:var(--navy);border:0;box-shadow:inset -4px -4px 0 rgba(0,0,0,.28),0 0 0 4px #000,6px 6px 0 4px #000;cursor:pointer;min-height:44px}
+.btn:active{transform:translate(4px,4px);box-shadow:inset -4px -4px 0 rgba(0,0,0,.28),0 0 0 4px #000}
+.btn.alt{background:var(--cyan)}.btn.ghost{background:#2b3466;color:#fff}
+.title{text-align:center;max-width:840px}
+.sub{font-size:clamp(15px,2.7vmin,26px);margin:0 0 1.3em}
+label{font-family:'Press Start 2P',monospace;font-size:clamp(10px,1.8vmin,16px);color:var(--lime);display:block}
+input{font:700 clamp(16px,3vmin,28px) 'Pixelify Sans',sans-serif;padding:.45em .7em;width:min(100%,460px);border:4px solid #000;background:#fff;color:var(--navy);box-shadow:6px 6px 0 #000;margin:.5em 0 1.4em;text-align:center}
+.keys{font-size:clamp(13px,2.1vmin,20px);opacity:.85;margin:1.6em 0 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,165px),1fr));gap:clamp(10px,2vmin,20px);margin:1em 0}
+.card{font-family:'Pixelify Sans',sans-serif;text-align:left;background:#0b1030;color:#fff;border:4px solid var(--c);box-shadow:6px 6px 0 #000;padding:clamp(10px,2vmin,18px);cursor:pointer;display:flex;flex-direction:column;gap:.35em}
+.card:hover:not(:disabled){transform:translate(-2px,-2px);box-shadow:8px 8px 0 #000}
+.card:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.7)}
+.card .ln{font-family:'Press Start 2P',monospace;font-size:clamp(10px,1.7vmin,15px);color:var(--c)}
+.card .wn{font-weight:700;font-size:clamp(16px,2.6vmin,24px)}
+.card .tp{font-size:clamp(13px,1.9vmin,17px);opacity:.9;flex:1}
+.card .st{color:var(--gold);font-size:clamp(16px,2.8vmin,26px);letter-spacing:.1em}
+.card .bs{font-family:'Press Start 2P',monospace;font-size:clamp(8px,1.4vmin,12px);opacity:.8;line-height:1.5}
+.row{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;align-items:center;margin-top:1.2em}
+.small{font-family:'Press Start 2P',monospace;font-size:clamp(9px,1.5vmin,13px);background:none;border:2px dashed #fff8;color:#fffc;padding:.8em 1em;cursor:pointer;min-height:44px}
+#total{font-family:'Press Start 2P',monospace;font-size:clamp(10px,1.8vmin,16px);color:var(--lime);text-align:center;margin:0}
+.quiz{max-width:1100px;max-height:calc(100vh - 20px);overflow:auto}
+.qtop{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-family:'Press Start 2P',monospace;font-size:clamp(10px,1.9vmin,18px)}
+#qNum{flex:1}
+.badge{padding:.45em .7em;border:3px solid #000;color:var(--navy)}
+.badge.d1{background:var(--lime)}.badge.d2{background:var(--gold)}.badge.d3{background:var(--red);color:#fff}
+#qTime{min-width:3.2em;text-align:center;background:#000;color:var(--cyan);padding:.45em .5em;border:3px solid var(--cyan)}
+.tbar{height:clamp(10px,1.5vmin,16px);background:#000;border:3px solid #000;margin:.8em 0 1em}
+.tbar i{display:block;height:100%;background:var(--cyan);width:100%}
+.tbar i.low{background:var(--red)}
+#qText{font-weight:700;font-size:clamp(20px,4.4vmin,46px);line-height:1.25;margin:.2em 0 .9em;text-wrap:balance}
+.blank{display:inline-block;min-width:2.6em;border-bottom:.12em solid var(--gold);color:var(--gold);text-align:center}
+.opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(8px,1.8vmin,18px)}
+.opt{font:700 clamp(17px,3.2vmin,34px)/1.2 'Pixelify Sans',sans-serif;text-align:left;background:#fff;color:var(--navy);border:4px solid #000;box-shadow:6px 6px 0 #000;padding:.55em .7em;cursor:pointer;display:flex;gap:.6em;align-items:center;min-height:52px}
+.opt b{font-family:'Press Start 2P',monospace;font-size:.55em;background:var(--navy);color:#fff;padding:.5em .55em;flex:none}
+.opt:hover:not(:disabled){background:#fff3a8}
+.opt.ok{background:var(--lime)}.opt.no{background:var(--red);color:#fff}
+.opt:disabled{cursor:default}
+.fb{margin-top:1.1em;padding:.8em 1em;border:4px solid #000;display:flex;flex-wrap:wrap;gap:.6em 1em;align-items:center;font-size:clamp(15px,2.6vmin,26px)}
+.fb.good{background:#1f5a2c}.fb.bad{background:#6a1a2a}
+.fb b{font-family:'Press Start 2P',monospace;font-size:clamp(11px,2vmin,20px)}
+.fb span{flex:1 1 260px}
+.hide{display:none!important}
+.end{text-align:center;max-width:780px}
+.bigstars{font-size:clamp(38px,9vmin,90px);color:var(--gold);text-shadow:4px 4px 0 #000;letter-spacing:.1em}
+.bigstars .off{color:#3a4170}
+.msg{font-size:clamp(16px,2.8vmin,28px);margin:.3em 0 0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:1em 0}
+.stats div{background:#0b1030;border:3px solid #000;padding:.6em;font-size:clamp(14px,2.2vmin,20px)}
+.stats b{display:block;font-family:'Press Start 2P',monospace;font-size:clamp(14px,2.8vmin,28px);color:var(--cyan);margin-top:.35em}
+:focus-visible{outline:4px solid var(--cyan);outline-offset:3px}
+a{color:var(--cyan)}
+.tbl{width:100%;border-collapse:collapse;font-size:clamp(14px,2.3vmin,22px)}
+.tbl th,.tbl td{padding:.45em .6em;border-bottom:2px solid #2b3466;text-align:left}
+.tbl th{font-family:'Press Start 2P',monospace;font-size:clamp(9px,1.5vmin,13px);color:var(--cyan);position:sticky;top:0;background:#141a3a}
+.tbl .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tbl tr.me td{background:#2b3466}
+.tbl td.rk{font-family:'Press Start 2P',monospace;font-size:.7em;color:var(--gold)}
+.boardwrap{max-height:56vh;overflow:auto;border:3px solid #000;background:#0b1030}
+.note{font-size:clamp(13px,2vmin,18px);opacity:.9;margin:.5em 0}
+.sync{font-size:clamp(13px,2vmin,18px);margin:.7em 0 0;min-height:1.3em;color:var(--lime)}
+.sync.err{color:#ffb3c0}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:16px;margin-top:.6em}
+.box{background:#0b1030;border:3px solid #000;padding:14px}
+.box h3{font-family:'Press Start 2P',monospace;font-size:clamp(10px,1.7vmin,14px);color:var(--gold);margin:0 0 .6em;line-height:1.5}
+.field{margin:.5em 0}.field input{width:100%;margin:.3em 0 0;text-align:left;font-size:18px}
+#certImg{max-width:100%;max-height:58vh;border:4px solid #000;display:block;margin:0 auto}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+@media (max-width:600px){.opts{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hud" class="hide">
+    <span id="hLv">LV 1</span><span id="hName">PLAYER</span><span id="hStar">★ 0/20</span><span id="hHeart">♥♥♥♥♥</span><span id="hScore">SCORE 0</span>
+    <span><button class="mini" id="bMusic" aria-label="Music on or off">♫</button><button class="mini" id="bMute" aria-label="Sound on or off">♪</button><button class="mini" id="bPause" aria-label="Pause">II</button></span>
+  </div>
+  <div id="stage">
+    <canvas id="cv" width="384" height="216"></canvas>
+    <div id="toast"></div>
+    <div id="pad" class="hide"><div><button data-k="left" aria-label="Left">◀</button><button data-k="right" aria-label="Right">▶</button></div><button data-k="jump" class="pj">JUMP</button></div>
+  </div>
+</div>
+
+<div class="screen on" id="sTitle"><div class="panel title">
+  <h1>PIXEL ROBOT<br><span>GRAMMAR QUEST</span></h1>
+  <p class="sub">5 space worlds · 100 English grammar questions · Easy → Hard</p>
+  <label for="nm">YOUR NAME</label>
+  <input id="nm" maxlength="14" placeholder="Type your name" autocomplete="off">
+  <div><button class="btn" id="bStart">START ▶</button></div>
+  <p class="keys">← → move · ↑ / SPACE jump · bump the <b style="color:var(--gold)">?</b> block to answer · stomp the pink bots</p>
+</div></div>
+
+<div class="screen" id="sSelect"><div class="panel">
+  <h2>CHOOSE A WORLD</h2>
+  <div class="grid" id="grid"></div>
+  <p id="total"></p>
+  <div class="row"><button class="btn ghost" id="bBack">◀ BACK</button><button class="btn alt" id="bBoard">LEADERBOARD</button><button class="btn" id="bCertAll">MY CERTIFICATE</button><button class="small" id="bTeacher">TEACHER</button></div>
+</div></div>
+
+<div class="screen" id="sQuiz"><div class="panel quiz">
+  <div class="qtop"><span id="qNum">QUESTION 1/20</span><span id="qDiff" class="badge d1">EASY</span><span id="qTime">20</span></div>
+  <div class="tbar"><i id="qBar"></i></div>
+  <p id="qText"></p>
+  <div class="opts" id="qOpts"></div>
+  <div class="fb hide" id="qFb"><b id="fbHead"></b><span id="fbExp"></span><button class="btn" id="bCont">CONTINUE ▶</button></div>
+</div></div>
+
+<div class="screen" id="sPause"><div class="panel end">
+  <h2>PAUSED</h2>
+  <div class="row"><button class="btn" id="bResume">RESUME ▶</button><button class="btn alt" id="bRestart">RESTART</button><button class="btn ghost" id="bLevels">LEVELS</button></div>
+</div></div>
+
+<div class="screen" id="sEnd"><div class="panel end">
+  <h2 id="eTitle"></h2>
+  <div class="bigstars" id="eStars"></div>
+  <p class="msg" id="eMsg"></p>
+  <div class="stats" id="eStats"></div>
+  <p class="sync" id="eSync"></p>
+  <div class="row" id="eBtns"></div>
+</div></div>
+
+<div class="screen" id="sBoard"><div class="panel">
+  <h2>LEADERBOARD</h2>
+  <p class="note" id="boardSrc"></p>
+  <div class="boardwrap"><table class="tbl"><thead><tr><th>#</th><th>PLAYER</th><th class="n">SCORE</th><th class="n">STARS</th><th class="n">WORLDS</th></tr></thead><tbody id="boardBody"></tbody></table></div>
+  <div class="row"><button class="btn ghost" id="bBoardBack">◀ BACK</button></div>
+</div></div>
+
+<div class="screen" id="sTeacher"><div class="panel">
+  <h2>TEACHER</h2>
+  <div class="tgrid">
+    <div class="box"><h3>GOOGLE SHEET</h3>
+      <p class="note">Every finished level is added to <a href="https://docs.google.com/spreadsheets/d/1azc3_LLRM7TKwBRjAdqE3irqmecAWGAUwJQmmR8zkp0/edit" target="_blank" rel="noopener">Pixel Robot Grammar Quest – Results</a>. SYNC NOW also refreshes its Leaderboard tab.</p>
+      <p class="note" id="tPending"></p>
+      <button class="btn alt" id="bSync">SYNC NOW</button>
+      <p class="sync" id="tSync"></p></div>
+    <div class="box"><h3>CERTIFICATE</h3>
+      <div class="field"><label for="fSchool">SCHOOL</label><input id="fSchool" maxlength="40" autocomplete="off"></div>
+      <div class="field"><label for="fTeacher">TEACHER</label><input id="fTeacher" maxlength="40" autocomplete="off"></div></div>
+    <div class="box"><h3>CLASS TOOLS</h3>
+      <div class="row" style="justify-content:flex-start;margin:0"><button class="small" id="bUnlock">Unlock all levels</button><button class="small" id="bReset">Reset this player</button></div>
+      <p class="note">Progress is kept on this device for each player name.</p></div>
+  </div>
+  <div class="row"><button class="btn ghost" id="bTeachBack">◀ BACK</button></div>
+</div></div>
+
+<div class="screen" id="sCert"><div class="panel end">
+  <h2>CERTIFICATE</h2>
+  <img id="certImg" alt="Certificate preview">
+  <p class="note" id="certNote"></p>
+  <div class="row"><button class="btn" id="bCertSave">DOWNLOAD PNG</button><button class="btn ghost" id="bCertBack">◀ BACK</button></div>
+</div></div>
+
+<script>
+{
+/* ================= GOOGLE SHEET LINK FOR GITHUB / WEBSITE =================
+   Paste your Google Apps Script Web App URL between the quotes, e.g.
+   const SCRIPT_URL='https://script.google.com/macros/s/AKfy.../exec';
+   (Inside Claude the game uses the Google Sheets connector instead.)        */
+const SCRIPT_URL='';
+/* ========================================================================== */
+const W=384,H=216,GROUND=184;
+const $=id=>document.getElementById(id);
+const cv=$('cv'),ctx=cv.getContext('2d');
+
+/* ===== QUESTION BANK =====
+   [difficulty 1=easy 2=medium 3=hard, question, [CORRECT ANSWER FIRST, wrong, wrong, wrong], explanation]
+   Options are shuffled automatically. Each game picks 7 easy + 7 medium + 6 hard at random. "___" shows as a blank. */
+/*DATA*/
+const LEVELS=[
+{name:'BLUE NEBULA',topic:'Singular & plural nouns · a, an, the · and, or',accent:'#5ef2ff',
+ theme:{sky:['#04061a','#13205a'],neb:['#2f6bff','#5ef2ff','#7a4dff'],planet:['#4d7cff','#2a4bb8','#9fc0ff'],ring:'#5ef2ff',rock:'#5a6aa8',far:'#141c44',near:'#1f2a60',light:'#5ef2ff',g1:'#26305e',g2:'#1a2147',gTop:'#5ef2ff'},qs:[
+[1,"One cat, two ___.",["cats","cat","cates","caties"],"Add -s to make most nouns plural: cat → cats."],
+[1,"Choose the plural of 'box'.",["boxes","boxs","boxies","box"],"Nouns ending in -x add -es: box → boxes."],
+[1,"I have ___ apple.",["an","a","many","two"],"Use 'an' before a vowel sound: an apple."],
+[1,"She has ___ umbrella.",["an","a","many","two"],"'umbrella' starts with a vowel sound, so we use 'an'."],
+[1,"Which word is SINGULAR (only one)?",["dog","dogs","buses","babies"],"Singular means one. 'dog' is one; the others are plural."],
+[1,"I eat rice ___ fish. I love both!",["and","or","an","the"],"Use 'and' to join two things together."],
+[1,"Do you want tea ___ coffee? Pick one.",["or","and","an","the"],"Use 'or' when there is a choice."],
+[2,"Choose the plural of 'baby'.",["babies","babys","babyes","babis"],"Consonant + y: change y to i and add -es → babies."],
+[2,"Choose the plural of 'child'.",["children","childs","childrens","childes"],"'child' is irregular: one child, two children."],
+[2,"Look at ___ moon! It is so bright tonight.",["the","a","an","some"],"There is only one moon, so we say 'the moon'."],
+[2,"Choose the plural of 'leaf'.",["leaves","leafs","leafes","leavs"],"Many nouns ending in -f change to -ves: leaf → leaves."],
+[2,"There are three ___ on the farm.",["sheep","sheeps","sheepes","shoop"],"'sheep' stays the same: one sheep, three sheep."],
+[2,"I saw ___ elephant at ___ National Zoo.",["an / the","a / the","an / a","the / an"],"'an elephant' (vowel sound); 'the National Zoo' (one special place)."],
+[2,"Is your pencil red ___ blue?",["or","and","an","a"],"The question asks you to choose one colour, so use 'or'."],
+[3,"Which sentence is correct?",["The mice are small.","The mouses are small.","The mices are small.","The mouse are small."],"'mouse' is irregular: one mouse, two mice."],
+[3,"Find the mistake: 'I bought two tomatos and an onion.'",["tomatos → tomatoes","an → a","onion → onions","bought → buy"],"Some nouns ending in -o add -es: tomato → tomatoes."],
+[3,"My sister ___ I go to ___ same school.",["and / the","or / the","and / a","or / an"],"'and' joins my sister and I; we say 'the same school'."],
+[3,"It takes ___ hour to get to ___ Petronas Twin Towers.",["an / the","a / the","an / a","a / an"],"'hour' has a silent h, so 'an hour'. Famous buildings take 'the'."],
+[3,"Which group has ONLY plural nouns?",["feet, teeth, geese","foot, teeth, geese","feet, tooth, goose","foots, teeths, gooses"],"foot → feet, tooth → teeth, goose → geese."],
+[3,"Choose the correct sentence.",["You can have a burger or a pizza, but not both.","You can have a burger and a pizza, but not both.","You can have burger or an pizza.","You can has a burger or pizza."],"'not both' means a choice → 'or'. We say 'a burger', 'a pizza'."],
+[1,"One book, three ___.",["books","bookes","book","bookies"],"Add -s to make most nouns plural: book → books."],
+[1,"Choose the plural of 'dish'.",["dishes","dishs","dishies","dish"],"Nouns ending in -sh add -es: dish → dishes."],
+[1,"I see ___ owl in the tree.",["an","a","many","two"],"'owl' starts with a vowel sound, so we use 'an'."],
+[1,"He is reading ___ book.",["a","an","many","two"],"'book' starts with a consonant sound, so we use 'a'."],
+[1,"Which word is PLURAL (more than one)?",["pencils","pencil","ruler","eraser"],"Plural means more than one: pencils."],
+[1,"Ali has a cat ___ a dog. He has two pets.",["and","or","an","the"],"He has both pets, so we join them with 'and'."],
+[1,"Is the answer true ___ false?",["or","and","an","a"],"It can only be one of them, so we use 'or'."],
+[2,"Choose the plural of 'tooth'.",["teeth","tooths","teeths","toothes"],"'tooth' is irregular: one tooth, many teeth."],
+[2,"Choose the plural of 'knife'.",["knives","knifes","knifs","knivs"],"-fe often changes to -ves: knife → knives."],
+[2,"Choose the plural of 'city'.",["cities","citys","cityes","cites"],"Consonant + y: change y to i and add -es → cities."],
+[2,"Please close ___ door behind you.",["the","a","an","some"],"We both know which door, so we use 'the'."],
+[2,"She wants to be ___ engineer.",["an","a","the","two"],"'engineer' starts with a vowel sound, so we use 'an'."],
+[2,"Which word is SINGULAR?",["woman","women","mice","feet"],"'woman' is one person; 'women' is the plural."],
+[2,"You can play outside ___ stay inside. Choose one.",["or","and","an","the"],"Choosing one thing → 'or'."],
+[3,"Which sentence is correct?",["I have two pencils and a ruler.","I have two pencil and a ruler.","I have two pencils and an ruler.","I have two pencils or a rulers."],"two pencils (plural), a ruler (consonant sound), 'and' joins them."],
+[3,"Find the mistake: 'She bought three dress and a hat.'",["dress → dresses","a → an","hat → hats","bought → buy"],"Nouns ending in -ss add -es: dress → dresses."],
+[3,"___ sun is ___ star.",["The / a","A / the","The / an","An / a"],"There is only one sun → 'the'; it is one of many stars → 'a star'."],
+[3,"Which group has ONLY singular nouns?",["man, child, mouse","men, child, mouse","man, children, mice","men, children, mice"],"man, child and mouse are each one thing."],
+[3,"Choose the correct sentence.",["We need eggs and milk to make a cake.","We need eggs or milk to make an cake.","We need egg and milks to make a cake.","We needs eggs and milk to make a cake."],"eggs (plural), 'and' (we need both), 'a cake'."],
+[3,"I ate ___ orange and ___ banana. ___ orange was sweet.",["an / a / The","a / an / The","an / a / A","the / a / An"],"an orange, a banana — then 'The orange' because we already know which one."]]},
+{name:'MARS BASE',topic:'Past tense & present tense',accent:'#ff9f1c',
+ theme:{sky:['#12030a','#4a1630'],neb:['#ff6a3d','#ff9f1c','#ff4d6d'],planet:['#e0602f','#a63c1c','#ffb38a'],ring:null,rock:'#a0584a',far:'#3a1420',near:'#4a1c22',light:'#ffd166',g1:'#5a2a26',g2:'#3d1a18',gTop:'#ff9f1c'},qs:[
+[1,"Yesterday, I ___ football.",["played","play","plays","playing"],"'Yesterday' tells us it is the past: play → played."],
+[1,"She ___ to school every day.",["walks","walk","walking","to walk"],"Simple present with he/she/it: add -s → walks."],
+[1,"Choose the past tense of 'go'.",["went","goed","gone","goes"],"'go' is irregular: go → went."],
+[1,"They ___ TV last night.",["watched","watch","watches","watching"],"'last night' = past: watch → watched."],
+[1,"My father ___ coffee every morning.",["drinks","drink","drinking","drinked"],"He/she/it + verb-s for daily habits: drinks."],
+[1,"Choose the past tense of 'eat'.",["ate","eated","eaten","eats"],"'eat' is irregular: eat → ate."],
+[1,"I ___ happy now.",["am","is","are","be"],"Present tense of 'be' with I is 'am'."],
+[2,"We ___ to Langkawi last holiday.",["went","go","goes","going"],"'last holiday' = past: go → went."],
+[2,"The sun ___ in the east.",["rises","rise","rising","risen"],"Facts use the simple present. The sun (it) → rises."],
+[2,"Ali ___ his homework yesterday.",["did","do","does","done"],"'yesterday' = past: do → did."],
+[2,"Which verb is in the PAST tense?",["swam","swim","swims","swimming"],"swim → swam (irregular past)."],
+[2,"Mia and Sam ___ in the same class now.",["are","is","was","be"],"Two people (they) + present → are."],
+[2,"Last Sunday, my mother ___ a delicious cake.",["baked","bake","bakes","baking"],"'Last Sunday' = past: bake → baked."],
+[2,"Choose the past tense of 'buy'.",["bought","buyed","brought","buys"],"buy → bought. ('brought' is the past of 'bring'!)"],
+[3,"Find the mistake: 'Yesterday she go to the market.'",["go → went","she → her","market → markets","Yesterday → Tomorrow"],"'Yesterday' needs the past tense: went."],
+[3,"Which sentence is in the PRESENT tense?",["He catches the bus at 7 a.m.","He caught the bus at 7 a.m.","He catched the bus at 7 a.m.","He has catch the bus."],"'catches' is simple present; 'caught' is past."],
+[3,"My brother ___ vegetables. He never eats them.",["doesn't like","don't like","doesn't likes","not like"],"He/she/it → doesn't + base verb: doesn't like."],
+[3,"___ you finish your project last night?",["Did","Do","Does","Are"],"Past questions use 'Did' + base verb."],
+[3,"I ___ busy now, but I ___ free yesterday.",["am / was","was / am","am / am","is / were"],"now → am (present); yesterday → was (past)."],
+[3,"Which sentence is correct?",["She wrote a letter last week.","She writes a letter last week.","She written a letter last week.","She write a letter last week."],"'last week' = past: write → wrote."],
+[1,"Choose the past tense of 'jump'.",["jumped","jumpt","jumps","jumping"],"Regular verbs add -ed: jump → jumped."],
+[1,"We ___ to music every evening.",["listen","listens","listening","to listen"],"We + simple present → base verb: listen."],
+[1,"Choose the past tense of 'see'.",["saw","seed","seen","sees"],"'see' is irregular: see → saw."],
+[1,"Last night, it ___ heavily.",["rained","rain","rains","raining"],"'Last night' = past: rain → rained."],
+[1,"The baby ___ a lot every day.",["cries","cry","crying","cryed"],"He/she/it + verb ending in consonant + y → -ies: cries."],
+[1,"Choose the past tense of 'run'.",["ran","runned","runs","running"],"'run' is irregular: run → ran."],
+[1,"They ___ my friends now.",["are","is","am","be"],"They + present → are."],
+[2,"My sister ___ a beautiful picture last Saturday.",["drew","draw","draws","drawed"],"'last Saturday' = past: draw → drew."],
+[2,"Choose the past tense of 'sing'.",["sang","singed","sings","sung"],"sing → sang (irregular past)."],
+[2,"Every Sunday, Grandpa ___ in the garden.",["works","work","working","to work"],"Habit + he → works."],
+[2,"Two hours ago, the children ___ hungry.",["were","was","are","is"],"'ago' = past; children (they) → were."],
+[2,"Which verb is in the PRESENT tense?",["writes","wrote","ate","went"],"'writes' is simple present; the others are past."],
+[2,"Yesterday, Ahmad ___ his bicycle to school.",["rode","ride","rides","rided"],"'Yesterday' = past: ride → rode."],
+[2,"Hana ___ her hair every morning.",["combs","comb","combing","combbed"],"Habit + she → combs."],
+[3,"Find the mistake: 'Last week, we visit our grandparents.'",["visit → visited","we → us","our → their","week → weeks"],"'Last week' needs the past tense: visited."],
+[3,"___ your mother cook nasi lemak every morning?",["Does","Do","Is","Are"],"Present question with he/she → Does + base verb."],
+[3,"Choose the correct sentence.",["They didn't go to school yesterday.","They didn't went to school yesterday.","They don't went to school yesterday.","They not go to school yesterday."],"didn't + base verb: didn't go."],
+[3,"My friends ___ football now, but last year they ___ badminton.",["play / played","played / play","plays / played","play / plays"],"now → play (present); last year → played (past)."],
+[3,"Which sentence is in the PAST tense?",["The cat slept under the table.","The cat sleeps under the table.","The cat sleep under the table.","The cat is sleep under the table."],"sleep → slept (past)."],
+[3,"Where ___ you yesterday?",["were","was","are","did"],"Past of 'be' with you → were."]]},
+{name:'ICE MOON',topic:'Comparative & superlative adjectives',accent:'#7fd1ff',
+ theme:{sky:['#020c18','#0e3a5a'],neb:['#7fd1ff','#b8f4ff','#4dd6c2'],planet:['#bfeaff','#6fb6dd','#ffffff'],ring:'#eaffff',rock:'#9fc6dd',far:'#123450',near:'#16405e',light:'#eaffff',g1:'#2c5a78',g2:'#1d4058',gTop:'#bff4ff'},qs:[
+[1,"big → bigger → ___",["biggest","bigest","more big","most big"],"Short word ending consonant-vowel-consonant: double the last letter → biggest."],
+[1,"An elephant is ___ than a cat.",["bigger","big","biggest","more big"],"Comparing two things + 'than' → comparative: bigger."],
+[1,"Choose the comparative of 'tall'.",["taller","tallest","more tall","talls"],"Short adjective + -er: taller."],
+[1,"Mount Kinabalu is the ___ mountain in Malaysia.",["highest","high","higher","more high"],"'the' + the top one of a group → superlative: highest."],
+[1,"Choose the superlative of 'small'.",["smallest","smaller","most small","smallist"],"Short adjective + -est: smallest."],
+[1,"A car is ___ than a bicycle.",["faster","fast","fastest","more fast"],"Two things + 'than' → faster."],
+[1,"Which word is a SUPERLATIVE?",["coldest","cold","colder","more cold"],"Superlatives end in -est (or use 'most')."],
+[2,"Choose the comparative of 'happy'.",["happier","happyer","more happy","happiest"],"Ending in -y: change y to i and add -er → happier."],
+[2,"This is the ___ day of my life!",["best","good","better","goodest"],"good → better → best (irregular)."],
+[2,"My handwriting is ___ than yours. I need to practise.",["worse","bad","worst","badder"],"bad → worse → worst (irregular)."],
+[2,"A cheetah is the ___ animal on land.",["fastest","faster","most fast","fast"],"'the' + top of all animals → fastest."],
+[2,"Choose the comparative of 'beautiful'.",["more beautiful","beautifuller","most beautiful","beautifulest"],"Long adjectives use 'more': more beautiful."],
+[2,"Today is ___ than yesterday.",["hotter","hot","hoter","hottest"],"hot → hotter (double the t)."],
+[2,"Choose the superlative of 'interesting'.",["most interesting","interestingest","more interesting","interestinger"],"Long adjectives use 'most' for the superlative."],
+[3,"Find the mistake: 'Siti is more taller than Aina.'",["remove 'more'","taller → tallest","than → then","is → are"],"Never use 'more' with -er. Say 'taller than'."],
+[3,"This puzzle is the ___ of all.",["most difficult","difficultest","more difficult","difficulter"],"'of all' → superlative; long word → most difficult."],
+[3,"Which sentence is correct?",["My bag is heavier than your bag.","My bag is heavyer than your bag.","My bag is more heavy than your bag.","My bag is heaviest than your bag."],"heavy → heavier (y → i + er), then 'than'."],
+[3,"Of the three boys, Adam is the ___.",["youngest","younger","more young","most young"],"Three or more → superlative: youngest."],
+[3,"far → ___ → ___",["farther / farthest","farer / farest","more far / most far","further / farrest"],"'far' is irregular: far → farther → farthest."],
+[3,"Choose the correct sentence.",["Ahmad is the best player in the whole team.","Ahmad is the better player in the whole team.","Ahmad is the most good player in the whole team.","Ahmad is best than everyone."],"'in the whole team' → superlative of good: the best."],
+[1,"Choose the comparative of 'long'.",["longer","longest","more long","longs"],"Short adjective + -er: longer."],
+[1,"A mouse is ___ than an elephant.",["smaller","small","smallest","more small"],"Two things + 'than' → smaller."],
+[1,"Choose the superlative of 'tall'.",["tallest","taller","most tall","tallist"],"Short adjective + -est: tallest."],
+[1,"The blue whale is the ___ animal in the world.",["biggest","bigger","big","most big"],"'the' + top of all → biggest."],
+[1,"My bag is ___ than your bag.",["lighter","light","lightest","more light"],"Comparing two bags + than → lighter."],
+[1,"Which word is a COMPARATIVE?",["stronger","strong","strongest","most strong"],"Comparatives end in -er (or use 'more')."],
+[1,"Choose the superlative of 'short'.",["shortest","shorter","most short","shortist"],"short → shorter → shortest."],
+[2,"Choose the comparative of 'easy'.",["easier","easyer","more easy","easiest"],"Ending in -y: change y to i + -er → easier."],
+[2,"Choose the comparative of 'thin'.",["thinner","thiner","more thin","thinnest"],"thin → thinner (double the n)."],
+[2,"Rina is the ___ girl in our class. She is always laughing.",["happiest","happier","most happy","happyest"],"happy → happiest (y → i + est)."],
+[2,"Choose the superlative of 'expensive'.",["most expensive","expensivest","more expensive","expensiver"],"Long adjectives use 'most'."],
+[2,"This book is ___ than that one.",["more interesting","interestinger","most interesting","interesting"],"Long adjective + than → more interesting."],
+[2,"Choose the superlative of 'bad'.",["worst","worse","baddest","most bad"],"bad → worse → worst (irregular)."],
+[2,"Choose the comparative of 'good'.",["better","gooder","best","more good"],"good → better → best (irregular)."],
+[3,"Find the mistake: 'This is the most hottest day of the year.'",["remove 'most'","hottest → hotter","day → days","the → a"],"Never use 'most' with -est. Say 'the hottest'."],
+[3,"Which sentence is correct?",["A lion is more dangerous than a cat.","A lion is dangerouser than a cat.","A lion is most dangerous than a cat.","A lion is more dangerouser than a cat."],"Long adjective → more dangerous than."],
+[3,"Of all the fruits, durian is the ___.",["smelliest","smellier","most smelly","smellyest"],"'Of all' → superlative: smelly → smelliest."],
+[3,"Sarah is ___ than her brother, but her mother is the ___ in the family.",["taller / tallest","tallest / taller","more tall / most tall","taller / taller"],"two people → taller; the whole family → tallest."],
+[3,"Choose the correct sentence.",["My house is farther from school than yours.","My house is farer from school than yours.","My house is more far from school than yours.","My house is farthest from school than yours."],"far → farther (comparative) + than."],
+[3,"Which group is correct?",["good – better – best","good – gooder – goodest","good – more good – most good","good – best – better"],"good is irregular: good → better → best."]]},
+{name:'LAVA PLANET',topic:'Future tense & simple present tense',accent:'#ff4d1a',
+ theme:{sky:['#0c0204','#3a0808'],neb:['#ff3d1a','#ff7a1a','#a8124a'],planet:['#ff4d1a','#8a1a0a','#ffd23f'],ring:null,rock:'#6a3030',far:'#2a0a0a',near:'#3a1010',light:'#ff7a1a',g1:'#3a1c1c',g2:'#251010',gTop:'#ff4d1a'},qs:[
+[1,"Tomorrow, I ___ visit my grandma.",["will","was","did","am"],"'Tomorrow' = future → will + verb."],
+[1,"Next week, we ___ have a test.",["will","were","did","has"],"'Next week' = future → will."],
+[1,"He ___ his teeth every night.",["brushes","brush","will brushes","brushing"],"Daily habit + he → simple present: brushes."],
+[1,"Which word shows the FUTURE?",["will","was","did","played"],"'will' talks about the future."],
+[1,"I ___ going to bake a cake this evening.",["am","is","are","be"],"I + am + going to."],
+[1,"The shop ___ at 9 a.m. every day.",["opens","open","opening","will opens"],"Routine + it → simple present: opens."],
+[1,"Look at the dark clouds! It ___ rain.",["is going to","are going to","going to","am going to"],"It + is going to (we can see it will happen)."],
+[2,"My family ___ to Sabah next month.",["will travel","travelled","will travels","travelling"],"'next month' = future → will + base verb."],
+[2,"Cats ___ fish.",["like","likes","will likes","liking"],"Plural subject (cats) → base verb: like."],
+[2,"She ___ come to the party tomorrow. She is busy.",["won't","don't","didn't","isn't"],"Future negative: will not = won't."],
+[2,"___ you help me later, please?",["Will","Did","Was","Does"],"Future question: Will + subject + verb."],
+[2,"They ___ going to play badminton after school.",["are","is","am","be"],"They + are + going to."],
+[2,"Water ___ at 100°C.",["boils","boil","will boils","boiling"],"Facts use the simple present: water boils."],
+[2,"Which sentence is in the FUTURE tense?",["I will read a book tonight.","I read a book every night.","I read a book last night.","I am read a book."],"'will read' + 'tonight' = future."],
+[3,"Find the mistake: 'She will goes to the library tomorrow.'",["goes → go","will → would","library → libraries","tomorrow → yesterday"],"After 'will', always use the base verb: will go."],
+[3,"Choose the correct sentence.",["He doesn't play football.","He don't play football.","He doesn't plays football.","He not play football."],"He/she/it + doesn't + base verb."],
+[3,"I usually ___ to school, but tomorrow I ___ the bus.",["walk / will take","walks / will take","walk / took","will walk / take"],"usually → simple present; tomorrow → will."],
+[3,"We are going ___ a new house next year.",["to buy","buy","buying","to buys"],"going to + base verb: going to buy."],
+[3,"Mum ___ me to school every day, but next week Dad ___.",["sends / will","send / will","sends / is","will send / sends"],"every day → sends; next week → will (send)."],
+[3,"Which sentence is correct?",["The train leaves at 8, and we will arrive at noon.","The train leave at 8, and we will arrives at noon.","The train leaving at 8, and we arrive will at noon.","The train will leaves at 8, and we arrive at noon."],"Timetables use simple present (leaves); will + base verb (will arrive)."],
+[1,"Next Monday, school ___ start at 7:30 a.m.",["will","was","did","were"],"'Next Monday' = future → will."],
+[1,"She ___ milk every morning.",["drinks","drink","drinking","will drinks"],"Habit + she → simple present: drinks."],
+[1,"My cat ___ on my bed every night.",["sleeps","sleep","sleeping","will sleeps"],"Habit + it → sleeps."],
+[1,"I think it ___ be sunny tomorrow.",["will","was","did","does"],"'tomorrow' = future → will be."],
+[1,"The bus ___ at the school gate every afternoon.",["stops","stop","stopping","will stops"],"Routine + it → stops."],
+[1,"Wait! I ___ help you.",["will","was","did","does"],"A decision to do something soon → will."],
+[1,"Fish ___ in water.",["live","lives","living","will lives"],"Fact + plural (fish) → live."],
+[2,"My parents ___ buy a new car next year.",["are going to","is going to","am going to","going to"],"They (my parents) + are going to."],
+[2,"Aiman ___ football every evening.",["plays","play","playing","will plays"],"Habit + he → plays."],
+[2,"We won't ___ late for the trip tomorrow.",["be","are","is","being"],"won't + base verb: won't be."],
+[2,"___ it rain this afternoon?",["Will","Does","Did","Is"],"Future question: Will + it + verb."],
+[2,"My teacher ___ us a story every Friday.",["tells","tell","telling","will tells"],"Habit + she/he → tells."],
+[2,"Which sentence is in the SIMPLE PRESENT tense?",["She sings in the choir.","She will sing in the choir.","She sang in the choir.","She is going to sing in the choir."],"'sings' = simple present."],
+[2,"Look at that boy on the wall! He ___ fall.",["is going to","are going to","going to","am going to"],"We can see it will happen → he is going to."],
+[3,"Find the mistake: 'My father don't drink coffee.'",["don't → doesn't","father → fathers","drink → drinks","coffee → coffees"],"He/she/it → doesn't."],
+[3,"Choose the correct sentence.",["They will not go to the beach tomorrow.","They will not goes to the beach tomorrow.","They not will go to the beach tomorrow.","They will no go to the beach tomorrow."],"will not + base verb: will not go."],
+[3,"Every year, we ___ to Melaka, and next year we ___ there again.",["go / will go","goes / will go","go / went","will go / go"],"every year → go; next year → will go."],
+[3,"Choose the correct question.",["Does she like durian?","Do she like durian?","Does she likes durian?","Is she like durian?"],"Does + she + base verb: Does she like…?"],
+[3,"Find the mistake: 'We are going to visits the museum next week.'",["visits → visit","are → is","going → go","museum → museums"],"going to + base verb: going to visit."],
+[3,"Which sentence is correct?",["The sun rises in the east, and it will rise again tomorrow.","The sun rise in the east, and it will rises again tomorrow.","The sun rises in the east, and it will rises again tomorrow.","The sun rising in the east, and it rise again tomorrow."],"Fact → rises; will + base verb → will rise."]]},
+{name:'GALAXY CORE',topic:'All grammar mixed',accent:'#b8ff5e',
+ theme:{sky:['#05010f','#2e0d55'],neb:['#ff7ab8','#a64dff','#b8ff5e'],planet:['#ff7ab8','#b03a7a','#ffd1ea'],ring:'#b8ff5e',rock:'#6a5aa8',far:'#1e1446',near:'#2c1f5e',light:'#ff7ab8',g1:'#2e2560',g2:'#1e1842',gTop:'#b8ff5e'},qs:[
+[1,"Choose the plural of 'bus'.",["buses","buss","busies","bus"],"Nouns ending in -s add -es: buses."],
+[1,"I ___ a sandwich yesterday.",["ate","eat","eats","eaten"],"yesterday → past: ate."],
+[1,"A giraffe is ___ than a horse.",["taller","tall","tallest","more tall"],"Two things + than → taller."],
+[1,"I ___ call you tonight.",["will","did","was","am"],"tonight (later) → will."],
+[1,"She has ___ orange ___ a banana in her bag.",["an / and","a / and","a / an","an / the"],"an orange (vowel sound); 'and' joins both fruits."],
+[1,"Birds ___ in the sky.",["fly","flies","flying","to fly"],"Plural (birds) + simple present → fly."],
+[1,"Choose the superlative of 'old'.",["oldest","older","most old","olddest"],"old → older → oldest."],
+[2,"Two ___ are fixing the road.",["men","mans","mens","man"],"man → men (irregular plural)."],
+[2,"Which sentence is in the PAST tense?",["We visited the museum.","We visit the museum.","We will visit the museum.","We are going to visit the museum."],"visited (-ed) = past."],
+[2,"This is the ___ book I have ever read!",["funniest","funny","funnier","most funny"],"funny → funniest (y → i + est)."],
+[2,"Would you like juice ___ water? Choose one.",["or","and","but","the"],"A choice → or."],
+[2,"Next year, my sister ___ twelve years old.",["will be","was","is being","were"],"Next year → will be."],
+[2,"Every Friday, Encik Rahman ___ to the mosque.",["goes","go","going","gone"],"Habit + he → goes."],
+[2,"Choose the correct sentence.",["The children are happier than before.","The childs are happier than before.","The children is happier than before.","The children are more happier than before."],"children (plural) + are; happier (not 'more happier')."],
+[3,"Find the mistake: 'Yesterday, the boxs fell off the table.'",["boxs → boxes","fell → fall","the → a","off → of"],"box → boxes."],
+[3,"Last year Amin was shorter than me, but now he is ___ than me.",["taller","tall","tallest","more tall"],"Comparing two people + than → taller."],
+[3,"Choose the correct sentence.",["She will buy two loaves of bread.","She will buys two loaves of bread.","She will buy two loafs of bread.","She buyed two loaves of bread."],"will + base verb; loaf → loaves."],
+[3,"I ___ my keys yesterday, so I ___ new ones tomorrow.",["lost / will get","lose / will get","lost / got","will lose / get"],"yesterday → lost; tomorrow → will get."],
+[3,"Which sentence has NO mistakes?",["The geese swam across the biggest lake in the park.","The gooses swam across the biggest lake in the park.","The geese swimmed across the biggest lake in the park.","The geese swam across the most big lake in the park."],"geese (plural), swam (past), biggest (superlative)."],
+[3,"Kuala Lumpur is ___ city in Malaysia, and it ___ many tall buildings.",["the biggest / has","the bigger / have","a biggest / has","the biggest / have"],"the biggest (superlative); it → has."],
+[1,"Choose the plural of 'fox'.",["foxes","foxs","foxies","fox"],"Nouns ending in -x add -es: foxes."],
+[1,"She ___ to school yesterday.",["walked","walk","walks","walking"],"yesterday → past: walked."],
+[1,"An apple is ___ than a watermelon.",["smaller","small","smallest","more small"],"Two things + than → smaller."],
+[1,"Next week, we ___ go camping.",["will","did","was","were"],"Next week → will."],
+[1,"___ elephant is big.",["An","A","Two","Many"],"'elephant' starts with a vowel sound → An."],
+[1,"Cats ___ milk.",["drink","drinks","drinking","to drink"],"Plural (cats) + simple present → drink."],
+[1,"Choose the superlative of 'young'.",["youngest","younger","most young","youngist"],"young → younger → youngest."],
+[2,"Three ___ are playing in the field.",["children","childs","childrens","child"],"child → children (irregular plural)."],
+[2,"This is the ___ test of the year.",["hardest","harder","most hard","hard"],"'the' + of the year → superlative: hardest."],
+[2,"Do you want rice ___ noodles? You can only pick one.",["or","and","but","an"],"Only one choice → or."],
+[2,"Last night, my father ___ a story to me.",["read","reads","will read","reading"],"Last night → past: read (same spelling, said 'red')."],
+[2,"Which sentence is in the FUTURE tense?",["My uncle will visit us next week.","My uncle visits us every week.","My uncle visited us last week.","My uncle visit us."],"will visit + next week = future."],
+[2,"My grandmother is ___ than my grandfather.",["older","old","oldest","more old"],"Two people + than → older."],
+[2,"Every morning, the birds ___ loudly.",["sing","sings","singing","to sing"],"Plural (birds) + habit → sing."],
+[3,"Find the mistake: 'Yesterday, the babys cried loudly.'",["babys → babies","cried → cry","loudly → loud","the → a"],"baby → babies (y → ies)."],
+[3,"Choose the correct sentence.",["The geese will fly south next month.","The gooses will fly south next month.","The geese will flies south next month.","The geese flew south next month."],"geese (plural); will + base verb; 'next month' needs the future."],
+[3,"Aina ___ the best student last year, and she ___ hard every day.",["was / works","is / work","were / works","was / work"],"last year → was; every day + she → works."],
+[3,"Which sentence has NO mistakes?",["An owl is smaller than an eagle.","A owl is smaller than an eagle.","An owl is more smaller than an eagle.","An owl is smallest than an eagle."],"an owl (vowel sound); smaller than."],
+[3,"My brothers ___ football every Saturday, but tomorrow they ___ swimming.",["play / will go","plays / will go","play / went","played / go"],"every Saturday → play; tomorrow → will go."],
+[3,"Choose the correct sentence.",["The children didn't eat the biggest cake.","The childrens didn't eat the biggest cake.","The children didn't ate the biggest cake.","The children didn't eat the most big cake."],"children; didn't + base verb; biggest."]]}
+];
+/*END*/
+
+const TIME={1:20,2:25,3:30}, DIFF={1:'EASY',2:'MEDIUM',3:'HARD'}, MAXH=5;
+
+/* ===== SAVE (this browser only) ===== */
+const KEY='prgq-save-v1';
+let save={name:'',muted:false,music:true,players:{},pending:[],school:'SK Chembong',teacher:'Madam Atikah'};
+try{const s=JSON.parse(localStorage.getItem(KEY));if(s){save=Object.assign(save,s);
+  if(s.best&&!s.players)save.players[(s.name||'PLAYER').toUpperCase()]={unlocked:s.unlocked||1,best:s.best,stars:s.stars||[0,0,0,0,0],last:0};
+  delete save.best;delete save.stars;delete save.unlocked;
+  if(!save.players||typeof save.players!=='object')save.players={};if(!Array.isArray(save.pending))save.pending=[]}}catch(e){}
+function prof(){return save.players[playerName]||(save.players[playerName]={unlocked:1,best:[0,0,0,0,0],stars:[0,0,0,0,0],last:0})}
+const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify(save))}catch(e){}};
+
+/* ===== HELPERS ===== */
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtQ=s=>esc(s).replace(/___/g,'<span class="blank">?</span>');
+const ov=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
+function rng(seed){return()=>{seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const rgb=h=>{const n=parseInt(h.slice(1),16);return[n>>16,n>>8&255,n&255]};
+const mix=(a,b,t)=>{const A=rgb(a),B=rgb(b);return'rgb('+A.map((v,i)=>Math.round(v+(B[i]-v)*t)).join(',')+')'};
+function mk(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');return[c,x]}
+function disc(x,cx,cy,r,col){x.fillStyle=col;for(let y=-r;y<=r;y++){const w=Math.round(Math.sqrt(r*r-y*y));x.fillRect(cx-w,cy+y,w*2,1)}}
+function tri(x,cx,peak,base,k,col){x.fillStyle=col;for(let y=peak;y<base;y+=2){const h=Math.floor((y-peak)*k)+1;x.fillRect(cx-h,y,h*2,2)}}
+
+/* ===== SPRITES ===== */
+const PAL={r:'#ff4d6d',w:'#e6f1ff',k:'#141a3a',c:'#5ef2ff',b:'#4d7cff',y:'#ffd23f',p:'#ff7ab8',s:'#9aa6c8'};
+function spr(rows){const h=rows.length,w=rows[0].length,[c,x]=mk(w+2,h+2);
+  const on=(i,j)=>j>=0&&j<h&&i>=0&&i<w&&!!PAL[rows[j][i]];
+  x.fillStyle='#000';
+  for(let j=-1;j<=h;j++)for(let i=-1;i<=w;i++)if(!on(i,j)&&(on(i-1,j)||on(i+1,j)||on(i,j-1)||on(i,j+1)))x.fillRect(i+1,j+1,1,1);
+  rows.forEach((r,j)=>[...r].forEach((ch,i)=>{if(PAL[ch]){x.fillStyle=PAL[ch];x.fillRect(i+1,j+1,1,1)}}));
+  return c}
+const RT=[".....rr.....",".....ww.....","..wwwwwwww..",".wkkkkkkkkw.",".wkcckkcckw.",".wkcckkcckw.",".wkkkkkkkkw.","..wwwwwwww..","...bbbbbb...","ww.bbyybb.ww","...bbbbbb...","...bbbbbb..."];
+const R_IDLE=spr([...RT,"...ss..ss...","..www..www.."]);
+const R_RUN1=spr([...RT,"..ss....ss..",".ww......ww."]);
+const R_RUN2=spr([...RT,"....ssss....","...ww..ww..."]);
+const ET=["..p......p..","...p....p...","..pppppppp..",".pppppppppp.",".pkkppppkkp.",".pkwppppwkp.",".pppppppppp.",".pppkkkkppp."];
+const E1=spr([...ET,"..pp....pp..","..kk....kk.."]);
+const E2=spr([...ET,"...pp..pp...","...kk..kk..."]);
+const GEM=spr(["...c...","..ccc..",".ccwcc.","ccccccc",".ccccc.","..ccc..","...c..."]);
+const QM=[".www.","w...w","....w","..ww.","..w..",".....","..w.."];
+
+/* ===== SPACE WORLD ART (animated background) ===== */
+function makeTheme(th,seed){
+  const R=rng(seed);
+  const [sky,s]=mk(W,H);
+  for(let i=0;i<16;i++){s.fillStyle=mix(th.sky[0],th.sky[1],i/15);s.fillRect(0,Math.floor(i*H/16),W,Math.ceil(H/16)+1)}
+  const [neb,n]=mk(768,H);
+  for(let k=0;k<5;k++){const cx=60+k*150+R()*60,cy=30+R()*100,col=th.neb[k%3],rad=30+R()*30;
+    for(let i=0;i<260;i++){const a=R()*6.283,r=Math.pow(R(),.7)*rad;n.globalAlpha=.05+R()*.1;n.fillStyle=col;n.fillRect((cx+Math.cos(a)*r*1.7)&~1,(cy+Math.sin(a)*r*.7)&~1,4,4)}}
+  n.globalAlpha=1;
+  const stars=[60,35,18].map(c=>Array.from({length:c},()=>({x:R()*W,y:R()*(GROUND-24),c:R()<.2?th.neb[1]:'#ffffff',ph:R()*6.28})));
+  const PR=26,TW=64,[tex,t]=mk(TW*2,PR*2+1);
+  for(let y=0;y<=PR*2;y++){t.fillStyle=th.planet[Math.floor(y/5)%3];t.fillRect(0,y,TW*2,1)}
+  for(let i=0;i<16;i++){const x=R()*TW|0,y=R()*PR*2|0,w=4+R()*10|0;t.fillStyle=th.planet[i%2?1:2];t.fillRect(x,y,w,2);t.fillRect(x+TW,y,w,2)}
+  const rocks=Array.from({length:9},()=>{const sz=4+R()*7|0,[c,x]=mk(sz+4,sz+4),m=(sz+4)>>1;disc(x,m,m,(sz>>1)+1,'#000');disc(x,m,m,sz>>1,th.rock);
+    x.fillStyle='rgba(255,255,255,.3)';x.fillRect(m-2,m-2,2,1);x.fillStyle='rgba(0,0,0,.35)';x.fillRect(m,m,2,2);return{img:c,x:R()*(W+40),y:36+R()*100,sp:.15+R()*.35,ph:R()*6.28}});
+  const [far,f]=mk(768,H);
+  let x=0;while(x<768){const w=60+R()*90|0,h=12+R()*26|0;f.fillStyle=th.far;for(let i=0;i<w;i++){const yy=GROUND-Math.round(Math.sin(i/w*Math.PI)*h);f.fillRect(x+i,yy,1,GROUND-yy)}
+    f.fillStyle='rgba(0,0,0,.25)';f.fillRect(x+(w>>2),GROUND-(h>>1),6,2);x+=w-10}
+  const [near,m]=mk(768,H),lights=[];
+  x=10;while(x<730){const kind=R()*3|0;
+    if(kind===0){const r=14+R()*14|0;disc(m,x+r,GROUND,r+1,'#000');disc(m,x+r,GROUND,r,th.near);m.fillStyle='rgba(255,255,255,.16)';m.fillRect(x+r-(r*.6|0),GROUND-(r*.7|0),5,2);
+      for(let i=0;i<3;i++){m.fillStyle=th.light;m.fillRect(x+r-9+i*7,GROUND-6,3,3)}
+      m.fillStyle='#000';m.fillRect(x+r,GROUND-r-6,1,6);lights.push({x:x+r,y:GROUND-r-8});x+=r*2+12+(R()*30|0)}
+    else if(kind===1){const w=10+R()*10|0,h=40+R()*50|0,top=GROUND-h;m.fillStyle='#000';m.fillRect(x-1,top-1,w+2,h+1);m.fillStyle=th.near;m.fillRect(x,top,w,h);
+      m.fillStyle='rgba(255,255,255,.14)';m.fillRect(x,top,2,h);
+      for(let wy=top+5;wy<GROUND-4;wy+=8){m.fillStyle=R()<.6?th.light:'rgba(0,0,0,.35)';m.fillRect(x+3,wy,w-6,2)}
+      m.fillStyle=th.near;m.fillRect(x+(w>>1),top-14,1,14);lights.push({x:x+(w>>1),y:top-16});x+=w+14+(R()*30|0)}
+    else{const w=24+R()*20|0,h=12+R()*10|0,top=GROUND-h,dx=x+(w>>1);m.fillStyle='#000';m.fillRect(x-1,top-1,w+2,h+1);m.fillStyle=th.near;m.fillRect(x,top,w,h);
+      for(let wx=x+3;wx<x+w-4;wx+=6){m.fillStyle=R()<.5?th.light:'rgba(0,0,0,.35)';m.fillRect(wx,top+4,3,3)}
+      m.fillStyle=th.near;m.fillRect(dx,top-8,2,8);m.fillStyle='#000';m.fillRect(dx-7,top-14,16,6);m.fillStyle='#c8d0f0';m.fillRect(dx-6,top-13,14,4);m.fillStyle=th.near;m.fillRect(dx-6,top-11,14,2);
+      lights.push({x:dx+1,y:top-17});x+=w+14+(R()*30|0)}}
+  const [tile,g]=mk(16,32);
+  g.fillStyle=th.g1;g.fillRect(0,0,16,32);g.fillStyle=th.gTop;g.fillRect(0,0,16,2);g.fillStyle='#000';g.fillRect(0,2,16,1);
+  g.fillStyle=th.g2;g.fillRect(0,12,16,1);g.fillRect(15,3,1,9);g.fillRect(7,13,1,19);
+  g.fillStyle='rgba(255,255,255,.25)';[[2,5],[12,5],[3,16],[11,16]].forEach(([a,b])=>g.fillRect(a,b,1,1));
+  g.globalAlpha=.35;g.fillStyle=th.gTop;g.fillRect(2,24,4,2);g.fillRect(10,24,4,2);g.globalAlpha=1;
+  return{th,sky,neb,stars,tex,TW,PR,rocks,far,near,lights,tile};
+}
+const ART=LEVELS.map((L,i)=>makeTheme(L.theme,101+i*977));
+let shoots=[];
+function drawPlanet(A){
+  const th=A.th,PR=A.PR,cx=Math.round(300+Math.sin(tick*.004)*8),cy=Math.round(58+Math.cos(tick*.006)*4);
+  const ma=tick*.012,mx=Math.round(cx+Math.cos(ma)*PR*2),my=Math.round(cy+Math.sin(ma)*PR*.55),back=Math.sin(ma)<0;
+  const ringPts=front=>{if(!th.ring)return;ctx.fillStyle=th.ring;for(let a=0;a<6.283;a+=.025){const sn=Math.sin(a);if((sn>=0)!==front)continue;ctx.fillRect(Math.round(cx+Math.cos(a)*PR*1.75),Math.round(cy+sn*PR*.32),2,1)}};
+  const moon=()=>{disc(ctx,mx,my,5,'#000');disc(ctx,mx,my,4,'#d8dcef');ctx.fillStyle='#a9b0cc';ctx.fillRect(mx-1,my-1,2,2)};
+  if(back)moon();
+  ringPts(false);
+  disc(ctx,cx,cy,PR+1,'#000');
+  const off=Math.floor(tick*.15)%A.TW;
+  for(let y=-PR;y<=PR;y++){const w=Math.round(Math.sqrt(PR*PR-y*y));if(w<=0)continue;
+    ctx.drawImage(A.tex,off+PR-w,y+PR,w*2,1,cx-w,cy+y,w*2,1);
+    const sw=Math.round(w*.55);ctx.fillStyle='rgba(0,0,0,.35)';ctx.fillRect(cx+w-sw,cy+y,sw,1)}
+  ctx.fillStyle='rgba(255,255,255,.4)';ctx.fillRect(cx-(PR*.55|0),cy-(PR*.55|0),4,2);
+  ringPts(true);
+  if(!back)moon();
+}
+function drawSpace(A){
+  ctx.drawImage(A.sky,0,0);
+  const no=-(Math.floor(tick*.08+camX*.03)%768);ctx.drawImage(A.neb,no,0);ctx.drawImage(A.neb,no+768,0);
+  const sp=[.04,.12,.3],pf=[.02,.06,.15];
+  A.stars.forEach((L,l)=>{for(const s of L){const x=Math.floor(((s.x-tick*sp[l]-camX*pf[l])%W+W)%W),y=s.y|0,tw=Math.sin(tick*.05+s.ph);
+    ctx.globalAlpha=l===0?.4+.3*tw:.75+.25*tw;ctx.fillStyle=s.c;ctx.fillRect(x,y,1,1);
+    if(l===2&&tw>.6){ctx.fillRect(x-1,y,3,1);ctx.fillRect(x,y-1,1,3)}}});
+  ctx.globalAlpha=1;
+  drawPlanet(A);
+  for(const s of shoots){for(let i=0;i<9;i++){ctx.globalAlpha=(1-i/9)*Math.min(1,s.life/15);ctx.fillStyle=i<2?'#ffffff':A.th.neb[1];ctx.fillRect(Math.round(s.x+i*2.2),Math.round(s.y-i),2,1)}}
+  ctx.globalAlpha=1;
+  for(const r of A.rocks){const span=W+40,x=((r.x-tick*r.sp-camX*.3)%span+span)%span-20;ctx.drawImage(r.img,Math.round(x),Math.round(r.y+Math.sin(tick*.02+r.ph)*3))}
+  const fo=-(Math.floor(camX*.2)%768);ctx.drawImage(A.far,fo,0);ctx.drawImage(A.far,fo+768,0);
+  const o=-(Math.floor(camX*.5)%768);ctx.drawImage(A.near,o,0);ctx.drawImage(A.near,o+768,0);
+  for(const l of A.lights){if(((tick+l.x*3)>>5)%2)continue;ctx.fillStyle=A.th.light;for(const ox of[o,o+768]){const x=ox+l.x;if(x>-3&&x<W+3)ctx.fillRect(x-1,l.y,3,3)}}
+}
+
+/* ===== SOUND ===== */
+let AC=null;
+function audio(){if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume().catch(()=>{});ensureMusic()}
+function tone(f,d,type='square',f2=0,vol=.06,delay=0){if(!AC||save.muted)return;try{const t=AC.currentTime+delay,o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+d);g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d+.03)}catch(e){}}
+const seq=(fs,step,d=.12)=>fs.forEach((f,i)=>tone(f,d,'square',0,.06,i*step));
+const SFX={jump:()=>tone(300,.15,'square',620),gem:()=>{tone(988,.07);tone(1319,.12,'square',0,.06,.06)},block:()=>tone(220,.1,'square',120),bonk:()=>tone(140,.06),
+  correct:()=>seq([523,659,784,1047],.08),wrong:()=>{tone(300,.2,'sawtooth',150);tone(200,.3,'sawtooth',90,.06,.18)},stomp:()=>tone(420,.12,'square',90),
+  hurt:()=>tone(520,.3,'sawtooth',80),tick:()=>tone(880,.04,'square',0,.03),portal:()=>seq([392,523,659,784,1047],.07),
+  win:()=>seq([523,659,784,1047,784,1047,1319],.11,.16),over:()=>seq([392,330,262,196],.16,.2)};
+
+/* ===== BACKGROUND MUSIC (chiptune, one tune per world) ===== */
+const TRACKS=[
+ {root:57,bpm:132,lead:[0,3,7,10,12,10,7,3,0,3,7,12,15,12,10,7],bass:[0,null,12,null,-2,null,10,null]},
+ {root:55,bpm:126,lead:[0,null,0,3,5,null,7,null,10,7,5,3,5,null,3,null],bass:[0,null,0,7,5,null,5,3]},
+ {root:62,bpm:140,lead:[12,7,4,7,12,7,4,7,14,9,5,9,14,9,5,9],bass:[0,null,0,null,-3,null,-3,null]},
+ {root:52,bpm:150,lead:[0,0,12,0,10,0,7,0,0,0,12,0,15,12,10,7],bass:[0,0,0,0,-2,-2,-4,-4]},
+ {root:60,bpm:136,lead:[0,4,7,11,12,11,7,4,2,5,9,12,14,12,9,5],bass:[0,null,7,null,5,null,7,null]},
+ {root:60,bpm:116,lead:[0,null,7,null,12,null,7,4,5,null,9,null,12,null,9,7],bass:[0,null,0,null,5,null,7,null]}];
+let mTimer=0,mStep=0,mNext=0,mTrack=5;
+const mf=n=>440*Math.pow(2,(n-69)/12);
+function mNote(f,t,d,type,vol){try{const o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.setValueAtTime(f,t);g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d+.02)}catch(e){}}
+function mSchedule(){if(!AC)return;const T=TRACKS[mTrack],sp=60/T.bpm/2;
+  if(mNext<AC.currentTime)mNext=AC.currentTime+.05;
+  while(mNext<AC.currentTime+.15){const i=mStep%T.lead.length,n=T.lead[i],b=T.bass[i%T.bass.length];
+    if(n!==null)mNote(mf(T.root+12+n),mNext,sp*.85,'square',.02);
+    if(b!==null)mNote(mf(T.root-12+b),mNext,sp*.95,'triangle',.06);
+    if(i%4===2)mNote(4000,mNext,.03,'square',.006);
+    mNext+=sp;mStep++}}
+function stopMusic(){clearInterval(mTimer);mTimer=0}
+function ensureMusic(){const t=levelActive?li:5;if(t!==mTrack){mTrack=t;mStep=0}
+  if(!AC||save.muted||!save.music){stopMusic();return}
+  if(!mTimer){mNext=AC.currentTime+.05;mTimer=setInterval(mSchedule,30)}}
+
+/* ===== GAME STATE ===== */
+const keys={left:false,right:false,jump:false,jumpPressed:false};
+let state='title',li=0,art=0,levelActive=false,tick=0,camX=0,shake=0,worldW=3000;
+let p,blocks=[],enemies=[],gems=[],parts=[],pops=[],portal={x:0,open:false};
+let queue=[],qi=0,correct=0,score=0,hearts=MAXH,gemsGot=0,answered=false,qStart=0,qLimit=0,lastSec=-1,portalNag=0;
+let playerName=save.name||'PLAYER';
+const isTouch=matchMedia('(pointer:coarse)').matches||('ontouchstart' in window);
+if(isTouch)document.body.classList.add('touch');
+
+/* 20 questions per game: 7 easy + 7 medium + 6 hard, picked at random from a 40-question bank,
+   no repeats inside a game, unseen questions first for this player, difficulties mixed in random order */
+const PICK={1:7,2:7,3:6};
+function buildQueue(qs){
+  const P=prof();if(!P.seen||typeof P.seen!=='object')P.seen={};
+  const seen=new Set(Array.isArray(P.seen[li])?P.seen[li]:[]);let picked=[];
+  [1,2,3].forEach(d=>{const ids=qs.map((q,i)=>i).filter(i=>qs[i][0]===d);
+    let fresh=shuffle(ids.filter(i=>!seen.has(i)));
+    if(fresh.length<PICK[d]){ids.forEach(i=>seen.delete(i));fresh=fresh.concat(shuffle(ids.filter(i=>!fresh.includes(i))).slice(0,PICK[d]-fresh.length))}
+    picked=picked.concat(fresh.slice(0,PICK[d]))});
+  picked.forEach(i=>seen.add(i));P.seen[li]=[...seen];persist();
+  return shuffle(picked).map(i=>{const q=qs[i],o=shuffle(q[2].map((t,k)=>({t,k})));return{d:q[0],text:q[1],opts:o.map(v=>v.t),ans:o.findIndex(v=>v.k===0),exp:q[3]}});
+}
+
+function buildLevel(i){
+  blocks=[];enemies=[];gems=[];parts=[];pops=[];
+  const gap=136;
+  for(let k=0;k<20;k++)blocks.push({x:150+k*gap,y:GROUND-60,w:16,h:16,used:false,bump:0});
+  worldW=150+20*gap+170;portal={x:worldW-100,open:false};
+  for(let k=1;k<20;k++){const a=blocks[k-1].x+16,b=blocks[k].x,mid=(a+b)/2;
+    if(k>=2&&(k%2===0||(i>=2&&k%3===1)))enemies.push({x:mid-6,y:GROUND-10,min:a+6,max:b-18,dir:k%4?1:-1,alive:true,dead:0});
+    [-18,0,18].forEach((dx,j)=>gems.push({x:mid+dx-4,y:GROUND-(j===1?48:38),w:7,h:7,taken:false}))}
+  p={x:40,y:GROUND-14,w:12,h:14,vx:0,vy:0,onG:true,face:1,inv:0,coyote:0,jbuf:0};
+  camX=0;queue=buildQueue(LEVELS[i].qs);qi=0;correct=0;score=0;hearts=MAXH;gemsGot=0;
+}
+
+/* ===== UI ===== */
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id))}
+let toastT=0;
+function toast(msg,ms=2400){const t=$('toast');t.textContent=msg;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),ms)}
+function hud(){$('hLv').textContent='LV '+(li+1);$('hName').textContent=playerName;$('hStar').textContent='★ '+correct+'/20';
+  $('hHeart').textContent='♥'.repeat(Math.max(0,hearts))+'♡'.repeat(Math.max(0,MAXH-hearts));$('hScore').textContent='SCORE '+score}
+function fit(){const r=$('stage').getBoundingClientRect();let w=r.width,h=w*9/16;if(h>r.height){h=r.height;w=h*16/9}cv.style.width=Math.floor(w)+'px';cv.style.height=Math.floor(h)+'px'}
+const ro=new ResizeObserver(fit);ro.observe($('stage'));
+const starStr=n=>'★'.repeat(n)+'☆'.repeat(3-n);
+function setMuteBtn(){$('bMute').textContent=save.muted?'×':'♪';$('bMusic').textContent=save.music?'♫':'×';$('bMusic').style.opacity=save.muted?.5:1}
+
+function renderSelect(){
+  $('grid').innerHTML=LEVELS.map((L,i)=>{const lock=i+1>prof().unlocked;
+    return `<button class="card" data-l="${i}" style="--c:${L.accent}" ${lock?'disabled':''}><span class="ln">LEVEL ${i+1}</span><span class="wn">${L.name}</span><span class="tp">${esc(L.topic)}</span><span class="st">${lock?'LOCKED':starStr(prof().stars[i])}</span><span class="bs">${lock?'Clear level '+i+' to unlock':'BEST '+prof().best[i]}</span></button>`}).join('');
+  const tot=prof().best.reduce((a,b)=>a+b,0),st=prof().stars.reduce((a,b)=>a+b,0);
+  $('total').textContent=playerName+' · TOTAL BEST '+tot+' · ★ '+st+'/15';
+  $('bCertAll').disabled=!prof().best.some(b=>b>0);
+}
+function goSelect(){state='select';levelActive=false;art=0;ensureMusic();$('hud').classList.add('hide');$('pad').classList.add('hide');renderSelect();showScreen('sSelect');fit()}
+
+function startLevel(i){
+  li=i;art=i;buildLevel(i);levelActive=true;state='play';showScreen(null);ensureMusic();
+  $('hud').classList.remove('hide');if(isTouch)$('pad').classList.remove('hide');hud();fit();
+  if(document.activeElement)document.activeElement.blur();
+  toast('LEVEL '+(i+1)+' · '+LEVELS[i].name,2200);
+  setTimeout(()=>{if(state==='play'&&qi===0)toast('Jump and bump the ? blocks!',2600)},2400);
+}
+
+/* ===== QUIZ ===== */
+function openQuiz(){
+  state='quiz';keys.left=keys.right=keys.jump=false;
+  const q=queue[qi];
+  $('qNum').textContent='QUESTION '+(qi+1)+'/20';
+  const b=$('qDiff');b.textContent=DIFF[q.d];b.className='badge d'+q.d;
+  $('qText').innerHTML=fmtQ(q.text);
+  $('qOpts').innerHTML=q.opts.map((o,i)=>`<button class="opt" data-i="${i}"><b>${'ABCD'[i]}</b><span>${esc(o)}</span></button>`).join('');
+  $('qFb').classList.add('hide');
+  answered=false;qStart=performance.now();qLimit=TIME[q.d]*1000;lastSec=-1;
+  $('qTime').textContent=TIME[q.d];$('qBar').style.width='100%';$('qBar').classList.remove('low');
+  $('pad').classList.add('hide');showScreen('sQuiz');
+}
+function quizTick(now){
+  if(answered)return;
+  const left=Math.max(0,qLimit-(now-qStart)),sec=Math.ceil(left/1000);
+  $('qBar').style.width=(left/qLimit*100)+'%';$('qBar').classList.toggle('low',sec<=5);
+  if(sec!==lastSec){$('qTime').textContent=sec;if(sec<=5&&sec>0)SFX.tick();lastSec=sec}
+  if(left<=0)answer(-1);
+}
+function answer(i){
+  if(answered||state!=='quiz')return;answered=true;
+  const q=queue[qi],ok=i===q.ans;
+  [...$('qOpts').children].forEach((el,k)=>{el.disabled=true;if(k===q.ans)el.classList.add('ok');else if(k===i)el.classList.add('no')});
+  const fb=$('qFb');
+  if(ok){correct++;const pts=q.d*10;score+=pts;SFX.correct();$('fbHead').textContent='CORRECT! +'+pts;fb.className='fb good';burst(p.x+6,p.y,'#ffd23f',20);pops.push({x:p.x+6,y:p.y-6,t:'+'+pts,life:60})}
+  else{hearts--;SFX.wrong();shake=8;$('fbHead').textContent=(i<0?"TIME'S UP!":'OOPS!')+' ♥ -1';fb.className='fb bad'}
+  $('fbExp').textContent=(ok?'':'Answer: '+q.opts[q.ans]+'. ')+q.exp;
+  $('bCont').textContent=hearts<=0?'SEE RESULT ▶':'CONTINUE ▶';
+  qi++;hud();
+  setTimeout(()=>$('bCont').focus({preventScroll:true}),60);
+}
+function closeQuiz(){
+  if(state!=='quiz'||!answered)return;
+  showScreen(null);if(isTouch)$('pad').classList.remove('hide');
+  if(hearts<=0){gameOver();return}
+  state='play';
+  if(qi>=20){portal.open=true;SFX.portal();toast('ALL 20 DONE! Run to the PORTAL ▶',3200)}
+}
+
+/* ===== END / PAUSE ===== */
+function endScreen(title,stars,msg,stats,btns){
+  $('eTitle').textContent=title;
+  $('eStars').innerHTML=stars<0?'':[0,1,2].map(k=>`<span class="${k<stars?'':'off'}">★</span>`).join('');
+  $('eMsg').textContent=msg;$('eSync').textContent='';
+  $('eStats').innerHTML=stats.map(s=>`<div>${s[0]}<b>${s[1]}</b></div>`).join('');
+  $('eBtns').innerHTML=btns.map(b=>`<button class="btn ${b[2]||''}" data-act="${b[1]}">${b[0]}</button>`).join('');
+  $('pad').classList.add('hide');showScreen('sEnd');
+  setTimeout(()=>{const f=$('eBtns').querySelector('button');if(f)f.focus({preventScroll:true})},80);
+}
+function levelComplete(){
+  state='end';SFX.win();
+  const st=correct>=18?3:correct>=14?2:correct>=10?1:0;
+  prof().stars[li]=Math.max(prof().stars[li],st);prof().best[li]=Math.max(prof().best[li],score);
+  if(li<4)prof().unlocked=Math.max(prof().unlocked,li+2);prof().last=Date.now();persist();lastStars=st;
+  const msg=st===3?'Amazing! You are a grammar champion!':st===2?'Great job! Keep it up!':st===1?'Good try! Play again to earn more stars.':'You finished! Try again to earn stars.';
+  endScreen(li===4?'ALL WORLDS CLEAR!':'LEVEL '+(li+1)+' CLEAR!',st,msg,
+    [['Correct',correct+'/20'],['Diamonds',gemsGot],['Hearts left',hearts],['Score',score]],
+    [...(li<4?[['NEXT LEVEL ▶','next']]:[]),['CERTIFICATE','cert'],['PLAY AGAIN','retry','alt'],['LEVELS','levels','ghost']]);
+  recordResult(true,st);
+}
+function gameOver(){
+  state='end';SFX.over();
+  endScreen('GAME OVER',-1,'Out of hearts! Read the explanations and try again.',
+    [['Correct',correct+'/20'],['Answered',qi+'/20'],['Score',score]],
+    [['TRY AGAIN','retry'],['LEVELS','levels','ghost']]);
+  recordResult(false,0);
+}
+function pause(){if(state!=='play')return;state='pause';$('pad').classList.add('hide');showScreen('sPause')}
+function resume(){if(state!=='pause')return;showScreen(null);if(isTouch)$('pad').classList.remove('hide');state='play'}
+
+/* ===== PHYSICS ===== */
+function burst(x,y,c,n=12){for(let i=0;i<n;i++)parts.push({x,y,vx:(Math.random()-.5)*3.2,vy:-Math.random()*3.2,life:25+(Math.random()*20|0),c})}
+function hurt(dir){
+  hearts--;p.inv=100;p.vy=-3.5;p.vx=dir*2.6;shake=10;SFX.hurt();hud();
+  if(hearts<=0){state='freeze';setTimeout(gameOver,700)}
+}
+function update(){
+  tick++;
+  if(Math.random()<1/180)shoots.push({x:W*.3+Math.random()*W*.8,y:4+Math.random()*70,life:50});
+  shoots=shoots.filter(q=>(q.x-=3.2,q.y+=1.4,--q.life>0));
+  parts=parts.filter(q=>(q.x+=q.vx,q.y+=q.vy,q.vy+=.15,--q.life>0));
+  pops=pops.filter(q=>(q.y-=.4,--q.life>0));
+  for(const b of blocks)if(b.bump>0)b.bump--;
+  if(!levelActive){camX+=.6;return}
+  if(state!=='play')return;
+  const dir=(keys.right?1:0)-(keys.left?1:0);
+  p.vx+=(dir*1.8-p.vx)*(p.onG?.35:.2);if(dir)p.face=dir;
+  if(keys.jumpPressed){p.jbuf=8;keys.jumpPressed=false}
+  if(p.jbuf>0)p.jbuf--;
+  if(p.onG)p.coyote=6;else if(p.coyote>0)p.coyote--;
+  if(p.jbuf>0&&p.coyote>0){p.vy=-6;p.onG=false;p.coyote=0;p.jbuf=0;SFX.jump()}
+  if(!keys.jump&&p.vy<-2.5)p.vy=-2.5;
+  p.vy=Math.min(p.vy+.32,6);
+  p.x+=p.vx;p.x=Math.max(0,Math.min(worldW-p.w,p.x));
+  for(const b of blocks)if(ov(p,b)){if(p.vx>0)p.x=b.x-p.w;else if(p.vx<0)p.x=b.x+b.w}
+  p.y+=p.vy;p.onG=false;
+  for(const b of blocks)if(ov(p,b)){
+    if(p.vy<0){p.y=b.y+b.h;p.vy=1;if(!b.used){b.used=true;b.bump=8;SFX.block();burst(b.x+8,b.y,'#ffd23f');openQuiz();return}else{b.bump=6;SFX.bonk()}}
+    else if(p.vy>0){p.y=b.y-p.h;p.vy=0;p.onG=true}}
+  if(p.y+p.h>=GROUND){p.y=GROUND-p.h;p.vy=0;p.onG=true}
+  const spd=.4+li*.09;
+  for(const e of enemies){
+    if(!e.alive){e.dead++;continue}
+    e.x+=e.dir*spd;if(e.x<e.min){e.x=e.min;e.dir=1}if(e.x>e.max){e.x=e.max;e.dir=-1}
+    const eb={x:e.x+1,y:e.y+2,w:10,h:8};
+    if(ov(p,eb)){
+      if(p.vy>0&&p.y+p.h-eb.y<7){e.alive=false;p.vy=-4.2;score+=15;pops.push({x:e.x+6,y:e.y-4,t:'+15',life:50});burst(e.x+6,e.y+4,'#ff7ab8');SFX.stomp();hud()}
+      else if(p.inv===0){hurt(e.x+6<p.x+6?1:-1);if(state!=='play')return}
+    }
+  }
+  if(p.inv>0)p.inv--;
+  for(const g of gems)if(!g.taken&&ov(p,g)){g.taken=true;gemsGot++;score+=5;pops.push({x:g.x+3,y:g.y-4,t:'+5',life:40});burst(g.x+3,g.y+3,'#5ef2ff',8);SFX.gem();hud()}
+  if(portalNag>0)portalNag--;
+  if(p.x+p.w>portal.x+4&&p.x<portal.x+16){
+    if(portal.open){levelComplete();return}
+    else if(portalNag===0){toast('Bump all the ? blocks first! ('+(20-qi)+' left)',2200);portalNag=150}
+  }
+  camX+=((p.x-W*.4)-camX)*.15;camX=Math.max(0,Math.min(worldW-W,camX));
+}
+
+/* ===== RENDER ===== */
+function drawSpr(img,x,y,flip){x=Math.round(x);y=Math.round(y);if(flip){ctx.save();ctx.translate(x+img.width,y);ctx.scale(-1,1);ctx.drawImage(img,0,0);ctx.restore()}else ctx.drawImage(img,x,y)}
+function txt(s,x,y,col){ctx.font='8px "Press Start 2P",monospace';ctx.textAlign='center';ctx.fillStyle='#000';for(const[a,b]of[[-1,0],[1,0],[0,-1],[0,1]])ctx.fillText(s,x+a,y+b);ctx.fillStyle=col;ctx.fillText(s,x,y)}
+function drawBlock(b){
+  const x=Math.round(b.x-camX),y=Math.round(b.y-(b.bump>0?Math.sin(b.bump/8*Math.PI)*4:0));
+  ctx.fillStyle='#000';ctx.fillRect(x,y,16,16);
+  ctx.fillStyle=b.used?'#6b5a4a':'#ffd23f';ctx.fillRect(x+1,y+1,14,14);
+  ctx.fillStyle=b.used?'#8a7560':'#fff3a8';ctx.fillRect(x+1,y+1,14,2);ctx.fillRect(x+1,y+1,2,14);
+  ctx.fillStyle=b.used?'#4a3e33':'#c98a00';ctx.fillRect(x+1,y+13,14,2);ctx.fillRect(x+13,y+1,2,14);
+  if(b.used){ctx.fillStyle='#4a3e33';[[4,4],[10,4],[4,10],[10,10]].forEach(([a,c])=>ctx.fillRect(x+a,y+c,2,2))}
+  else{ctx.fillStyle=(tick>>4)%4===0?'#ffffff':'#7a3d00';QM.forEach((r,j)=>[...r].forEach((ch,i)=>{if(ch==='w')ctx.fillRect(x+5+i,y+4+j,1,1)}))}
+}
+function drawPortal(){
+  const x=Math.round(portal.x-camX),y=GROUND-36;if(x<-30||x>W+10)return;
+  ctx.fillStyle='#000';ctx.fillRect(x-2,y-2,24,38);ctx.fillStyle='#9aa6c8';ctx.fillRect(x,y,20,36);
+  if(portal.open){const C=['#5ef2ff','#ff7ab8','#b8ff5e','#ffd23f'];for(let j=0;j<11;j++){ctx.fillStyle=C[(j+(tick>>2))%4];ctx.fillRect(x+3,y+3+j*3,14,3)}}
+  else{ctx.fillStyle='#141a3a';ctx.fillRect(x+3,y+3,14,33);ctx.fillStyle='#ffd23f';ctx.fillRect(x+7,y+15,6,6);ctx.fillRect(x+8,y+11,4,4);ctx.fillStyle='#141a3a';ctx.fillRect(x+9,y+12,2,3)}
+  txt(portal.open?'GO!':qi+'/20',x+10,y-6,portal.open?'#b8ff5e':'#ffd23f');
+}
+function render(){
+  const A=ART[art];
+  ctx.save();
+  if(shake>0){ctx.translate((Math.random()*4-2)|0,(Math.random()*4-2)|0);shake--}
+  drawSpace(A);
+  const off=-(Math.floor(camX)%16);for(let x=off;x<W;x+=16)ctx.drawImage(A.tile,x,GROUND);
+  if(levelActive){
+    drawPortal();
+    for(const b of blocks)if(b.x-camX>-20&&b.x-camX<W+4)drawBlock(b);
+    for(const g of gems)if(!g.taken&&g.x-camX>-10&&g.x-camX<W+4)ctx.drawImage(GEM,Math.round(g.x-camX)-1,Math.round(g.y+Math.sin(tick/10+g.x)*1.5)-1);
+    for(const e of enemies){const x=e.x-camX;if(x<-16||x>W+4)continue;
+      if(e.alive)drawSpr((tick>>4)%2?E1:E2,x-1,e.y-1,e.dir<0);
+      else if(e.dead<24)ctx.drawImage(E1,Math.round(x-1),e.y+5,14,6)}
+    if(!(p.inv>0&&(tick>>2)%2)){let img=R_IDLE;if(!p.onG)img=R_RUN1;else if(Math.abs(p.vx)>.3)img=(tick>>3)%2?R_RUN1:R_RUN2;drawSpr(img,p.x-1-camX,p.y-1,p.face<0)}
+    for(const q of parts){ctx.fillStyle=q.c;ctx.fillRect(Math.round(q.x-camX),Math.round(q.y),2,2)}
+    for(const q of pops)txt(q.t,Math.round(q.x-camX),Math.round(q.y),'#ffffff');
+  }else{
+    drawSpr((tick>>3)%2?R_RUN1:R_RUN2,W*.3,GROUND-15,false);
+    const bx=Math.round(W*.3+120-(camX*1)%260);drawBlock({x:bx+camX,y:GROUND-60,used:false,bump:0});
+  }
+  ctx.restore();
+}
+
+/* ===== LOOP ===== */
+let last=performance.now(),acc=0;
+function frame(now){acc+=Math.min(100,now-last);last=now;while(acc>=1000/60){update();acc-=1000/60}render();if(state==='quiz')quizTick(now);requestAnimationFrame(frame)}
+
+/* ===== INPUT ===== */
+addEventListener('keydown',e=>{
+  audio();
+  if(e.target.tagName==='INPUT'){if(e.key==='Enter'&&e.target.id==='nm')$('bStart').click();return}
+  const k=e.key,kl=k.toLowerCase();
+  if(state==='quiz'){const m={'1':0,'2':1,'3':2,'4':3,a:0,b:1,c:2,d:3}[kl];
+    if(m!==undefined&&!answered){e.preventDefault();answer(m)}
+    else if(answered&&(k==='Enter'||k===' ')){e.preventDefault();closeQuiz()}return}
+  if(k==='Escape'||kl==='p'){if(state==='play')pause();else if(state==='pause')resume();return}
+  if(kl==='m'){save.muted=!save.muted;persist();setMuteBtn();ensureMusic();return}
+  if(state!=='play')return;
+  if(k==='ArrowLeft'||kl==='a')keys.left=true;
+  if(k==='ArrowRight'||kl==='d')keys.right=true;
+  if(k==='ArrowUp'||kl==='w'||k===' '){if(!keys.jump)keys.jumpPressed=true;keys.jump=true}
+  if(k.startsWith('Arrow')||k===' ')e.preventDefault();
+});
+addEventListener('keyup',e=>{const k=e.key,kl=k.toLowerCase();
+  if(k==='ArrowLeft'||kl==='a')keys.left=false;
+  if(k==='ArrowRight'||kl==='d')keys.right=false;
+  if(k==='ArrowUp'||kl==='w'||k===' ')keys.jump=false});
+addEventListener('blur',()=>{keys.left=keys.right=keys.jump=false});
+$('pad').querySelectorAll('button').forEach(b=>{const k=b.dataset.k;
+  b.addEventListener('pointerdown',e=>{e.preventDefault();audio();try{b.setPointerCapture(e.pointerId)}catch(_){}if(k==='jump'&&!keys.jump)keys.jumpPressed=true;keys[k]=true;b.classList.add('down')});
+  ['pointerup','pointercancel','lostpointercapture'].forEach(t=>b.addEventListener(t,()=>{keys[k]=false;b.classList.remove('down')}))});
+
+$('nm').value=save.name;
+$('bStart').addEventListener('click',()=>{audio();playerName=($('nm').value.trim()||'PLAYER').toUpperCase().slice(0,14);save.name=playerName;persist();goSelect()});
+$('bBack').addEventListener('click',()=>{state='title';showScreen('sTitle')});
+$('grid').addEventListener('click',e=>{const c=e.target.closest('.card');if(c&&!c.disabled){audio();startLevel(+c.dataset.l)}});
+$('bUnlock').addEventListener('click',()=>{prof().unlocked=5;persist();renderSelect();SFX.portal();$('bUnlock').textContent='Unlocked ✓'});
+let resetArm=0;
+$('bReset').addEventListener('click',()=>{const b=$('bReset');
+  if(!resetArm){resetArm=1;b.textContent='Tap again to confirm';setTimeout(()=>{resetArm=0;b.textContent='Reset this player'},3000);return}
+  resetArm=0;b.textContent='Reset this player';prof().unlocked=1;prof().best=[0,0,0,0,0];prof().stars=[0,0,0,0,0];persist();renderSelect()});
+$('qOpts').addEventListener('click',e=>{const o=e.target.closest('.opt');if(o)answer(+o.dataset.i)});
+$('bCont').addEventListener('click',closeQuiz);
+$('bPause').addEventListener('click',()=>{if(state==='play')pause();else if(state==='pause')resume()});
+$('bMute').addEventListener('click',()=>{save.muted=!save.muted;persist();setMuteBtn();audio()});
+$('bMusic').addEventListener('click',()=>{save.music=!save.music;persist();setMuteBtn();audio()});
+$('bResume').addEventListener('click',resume);
+$('bRestart').addEventListener('click',()=>startLevel(li));
+$('bLevels').addEventListener('click',goSelect);
+$('eBtns').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const a=b.dataset.act;
+  if(a==='cert'){openCert('level','sEnd');return}
+  if(a==='next')startLevel(li+1);else if(a==='retry')startLevel(li);else goSelect()});
+
+/* ===== RESULTS → GOOGLE SHEET, SHARED LEADERBOARD, CERTIFICATE ===== */
+const inClaude=!!(window.claude&&typeof window.claude.use==='function'),viaScript=!inClaude&&/^https:\/\/script\.google\.com\//.test(SCRIPT_URL);
+const SHEET_ID='1azc3_LLRM7TKwBRjAdqE3irqmecAWGAUwJQmmR8zkp0',GS='Google Sheets';
+let mcp=null,db=null,uid=null,dl=null,remote={},boardLive=false,boardMsg='',sheetBusy=false,boardQ=Promise.resolve(),lastStars=0;
+const pad2=n=>String(n).padStart(2,'0');
+const stamp=(t=Date.now())=>{const d=new Date(t);return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+' '+pad2(d.getHours())+':'+pad2(d.getMinutes())};
+function setSync(msg,err){for(const id of['eSync','tSync']){const el=$(id);el.textContent=msg;el.classList.toggle('err',!!err)}}
+function sheetErr(e){const c=e&&e.code;
+  if(c==='needs_reauth')return'Reconnect Google Sheets in claude.ai Settings → Connectors. Result kept on this device.';
+  if(c==='server_not_connected'||c==='selection_required')return'Google Sheets is not connected for this account. Result kept on this device — the teacher can sync later.';
+  if(c==='not_in_manifest'||c==='approval_required'||c==='blocked_by_policy'||c==='consent_required')return'Google Sheet access was not allowed here. Result kept on this device.';
+  if(c==='tool_error')return'Google Sheets refused the save (this account may not have access to the sheet). Result kept on this device.';
+  if(c==='server_unavailable'||c==='upstream_error')return"Google Sheets didn't answer — the result may or may not be in the sheet. It is kept here; check the sheet before syncing again.";
+  return'Could not reach Google Sheets. Result kept on this device.'}
+function recordResult(cleared,st){
+  save.pending.push([stamp(),playerName,li+1,LEVELS[li].name,correct,score,st,Math.max(0,hearts),gemsGot,cleared?'CLEAR':'GAME OVER']);
+  persist();if(cleared)pushBoard();flushSheet(false);
+}
+async function flushSheet(manual){
+  if(sheetBusy)return;
+  if(!mcp&&viaScript)return postScript(manual);
+  if(!mcp){setSync(save.pending.length?'Saved on this device. Google Sheet sync works when the teacher opens the game in Claude.':'',false);updateTeacher();return}
+  sheetBusy=true;
+  try{
+    if(save.pending.length){setSync('Saving to Google Sheet…');const rows=save.pending.slice();
+      await mcp.callTool(GS,'append_values',{spreadsheetId:SHEET_ID,range:'Results!A1',values:rows});
+      save.pending.splice(0,rows.length);persist();setSync('✓ Saved to Google Sheet')}
+    if(manual){setSync('Updating Leaderboard tab…');
+      const rows=boardRows().map((p,i)=>[i+1,p.name,p.total,p.st,p.cleared,...p.best,p.last?stamp(p.last):'']);
+      while(rows.length<150)rows.push(Array(11).fill(''));
+      await mcp.callTool(GS,'update_values',{spreadsheetId:SHEET_ID,range:'Leaderboard!A2:K'+(rows.length+1),values:rows});
+      setSync('✓ Google Sheet is up to date')}
+  }catch(e){setSync(sheetErr(e),true)}
+  finally{sheetBusy=false;updateTeacher()}
+}
+async function postScript(manual){
+  sheetBusy=true;
+  try{
+    if(save.pending.length){setSync('Saving to Google Sheet…');const rows=save.pending.slice();
+      const r=await fetch(SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({rows})});
+      const j=await r.json();if(!j||!j.ok)throw new Error((j&&j.error)||'Sheet refused the save');
+      save.pending.splice(0,rows.length);persist();setSync('✓ Saved to Google Sheet')}
+    else if(manual)setSync('✓ Google Sheet is up to date');
+    loadScriptBoard();
+  }catch(e){setSync("Couldn't reach the Google Sheet (check the internet). Result kept on this device — it will be sent next time.",true)}
+  finally{sheetBusy=false;updateTeacher()}
+}
+async function loadScriptBoard(){
+  if(!viaScript)return;
+  try{const r=await fetch(SCRIPT_URL+'?t='+Date.now());const j=await r.json();
+    if(j&&j.ok&&Array.isArray(j.players)){const o={};j.players.forEach(p=>{if(p&&typeof p.name==='string')o[p.name]=p});remote={sheet:o};boardLive=true;boardMsg='';renderBoard()}}
+  catch(e){boardMsg='The Google Sheet leaderboard can’t be reached right now — showing this device.';renderBoard()}
+}
+function updateTeacher(){
+  const n=save.pending.length;
+  if(!inClaude){$('tPending').textContent=!viaScript?'Not linked yet: paste the Apps Script Web App URL into SCRIPT_URL at the top of the script in index.html.'
+    :n?n+' result(s) on this device are waiting to be sent.':'Linked to the Google Sheet. All results from this device are in the sheet.';
+    $('bSync').classList.toggle('hide',!viaScript);return}
+  $('tPending').textContent=!mcp?'Google Sheets is not available in this view. Open the game in claude.ai, signed in with the account that has the Google Sheets connector.'
+    :n?n+' result(s) on this device are waiting to be sent.':'All results from this device are in the sheet.';
+  $('bSync').classList.toggle('hide',!mcp);
+}
+function boardRows(){
+  const all={};
+  const add=p=>{if(!p||typeof p.name!=='string')return;const k=p.name.toUpperCase().slice(0,14);
+    const cur=all[k]||(all[k]={name:k,best:[0,0,0,0,0],stars:[0,0,0,0,0],last:0});
+    for(let i=0;i<5;i++){cur.best[i]=Math.max(cur.best[i],+(p.best||[])[i]||0);cur.stars[i]=Math.max(cur.stars[i],Math.min(3,+(p.stars||[])[i]||0))}
+    cur.last=Math.max(cur.last,+p.last||0)};
+  Object.values(remote).forEach(pl=>Object.values(pl||{}).forEach(add));
+  Object.entries(save.players).forEach(([k,v])=>add({name:k,best:v.best,stars:v.stars,last:v.last}));
+  return Object.values(all).map(p=>({...p,total:p.best.reduce((a,b)=>a+b,0),st:p.stars.reduce((a,b)=>a+b,0),cleared:p.best.filter(b=>b>0).length}))
+    .filter(p=>p.total>0).sort((a,b)=>b.total-a.total||b.st-a.st||a.name.localeCompare(b.name));
+}
+function renderBoard(){
+  $('boardSrc').textContent=boardMsg||(boardLive?(viaScript?'Live leaderboard from the Google Sheet — every player, every device.':'Live leaderboard — shared by everyone who plays this game signed in to Claude.'):'Players on this device.');
+  const rows=boardRows();
+  $('boardBody').innerHTML=rows.length?rows.slice(0,50).map((p,i)=>`<tr class="${p.name===playerName?'me':''}"><td class="rk">${i<3?['1ST','2ND','3RD'][i]:i+1}</td><td>${esc(p.name)}</td><td class="n">${p.total}</td><td class="n">★ ${p.st}</td><td class="n">${p.cleared}/5</td></tr>`).join('')
+    :'<tr><td colspan="5">No scores yet — clear a level to get on the board!</td></tr>';
+}
+function pushBoard(){
+  if(!db||!uid)return;
+  boardQ=boardQ.then(async()=>{const ref=db.doc('scores/'+uid);const snap=await ref.get();
+    const cur=snap.exists&&snap.data().players&&typeof snap.data().players==='object'?JSON.parse(JSON.stringify(snap.data().players)):{};
+    let changed=false;
+    for(const[k,v]of Object.entries(save.players)){if(!v.best.some(b=>b>0))continue;const o=cur[k]||{name:k,best:[0,0,0,0,0],stars:[0,0,0,0,0],last:0};
+      const nb=o.best.map((b,i)=>Math.max(+b||0,v.best[i]||0)),ns=o.stars.map((b,i)=>Math.max(+b||0,v.stars[i]||0)),nl=Math.max(+o.last||0,v.last||0);
+      if(JSON.stringify([nb,ns,nl])!==JSON.stringify([o.best,o.stars,o.last])){cur[k]={name:k,best:nb,stars:ns,last:nl};changed=true}}
+    if(changed)await ref.set({players:cur});
+  }).catch(e=>{if(e&&e.code==='invalid_argument'){boardMsg='This account can view the leaderboard but cannot add scores to it. Scores stay on this device.';renderBoard()}});
+}
+
+/* certificate */
+let certBlob=null,certName='',certBack='sSelect';
+function fitText(x,t,max,font,w){let sz=max;do{x.font=font.replace('#',sz);sz-=2}while(x.measureText(t).width>w&&sz>14)}
+async function openCert(kind,back){
+  certBack=back;
+  try{await Promise.all([document.fonts.load('40px "Press Start 2P"'),document.fonts.load('700 40px "Pixelify Sans"')])}catch(e){}
+  const P=prof(),Wc=1600,Hc=1130,[c,x]=mk(Wc,Hc);x.imageSmoothingEnabled=false;
+  const A=ART[kind==='level'?li:4];
+  x.drawImage(A.sky,0,0,Wc,Hc);x.drawImage(A.neb,0,0,384,H,0,0,Wc,Hc);
+  const Rr=rng(7);for(let i=0;i<160;i++){x.fillStyle=Rr()<.25?A.th.neb[1]:'#fff';const s=Rr()<.15?6:3;x.fillRect(Rr()*Wc|0,Rr()*Hc|0,s,s)}
+  x.fillStyle='#000';x.fillRect(60,60,Wc-120,Hc-120);x.fillStyle='#ffd23f';x.fillRect(72,72,Wc-144,Hc-144);
+  x.fillStyle='#000';x.fillRect(90,90,Wc-180,Hc-180);x.fillStyle='rgba(20,26,58,.94)';x.fillRect(96,96,Wc-192,Hc-192);
+  [[96,96],[Wc-144,96],[96,Hc-144],[Wc-144,Hc-144]].forEach(([a,b],i)=>{x.fillStyle=['#5ef2ff','#ff7ab8','#b8ff5e','#ff9f1c'][i];x.fillRect(a,b,48,48);x.fillStyle='#000';x.fillRect(a+16,b+16,16,16)});
+  x.textAlign='center';x.textBaseline='alphabetic';
+  const sh=(t,X,Y,col,off=6)=>{x.fillStyle='#000';x.fillText(t,X+off,Y+off);x.fillStyle=col;x.fillText(t,X,Y)};
+  x.font='60px "Press Start 2P",monospace';sh('CERTIFICATE',Wc/2,240,'#ffd23f');
+  x.font='28px "Press Start 2P",monospace';sh('OF ACHIEVEMENT',Wc/2,300,'#5ef2ff',4);
+  x.font='36px "Pixelify Sans",sans-serif';x.fillStyle='#fff';x.fillText('This certificate is proudly presented to',Wc/2,385);
+  fitText(x,playerName,76,'#px "Press Start 2P",monospace',1150);sh(playerName,Wc/2,500,'#ffffff',6);
+  x.fillStyle='#ffd23f';x.fillRect(Wc/2-560,530,1120,6);
+  let l1,l2,stars,stat;
+  if(kind==='level'){l1='for clearing LEVEL '+(li+1)+' · '+LEVELS[li].name;l2=LEVELS[li].topic;stars='★'.repeat(lastStars)+'☆'.repeat(3-lastStars);stat='Score '+score+'   ·   '+correct+'/20 correct';}
+  else{const cl=P.best.filter(b=>b>0).length,st=P.stars.reduce((a,b)=>a+b,0);l1=cl===5?'for clearing ALL 5 SPACE WORLDS':'for clearing '+cl+' of 5 space worlds';l2='English Grammar · Pixel Robot Grammar Quest';stars='★ '+st+' / 15';stat='Total best score '+P.best.reduce((a,b)=>a+b,0);}
+  x.font='700 44px "Pixelify Sans",sans-serif';x.fillStyle='#fff';x.fillText(l1,Wc/2,610);
+  x.font='34px "Pixelify Sans",sans-serif';x.fillStyle='#b8ff5e';x.fillText(l2,Wc/2,662);
+  x.font='72px "Pixelify Sans",sans-serif';sh(stars,Wc/2,760,'#ffd23f',5);
+  x.font='700 34px "Pixelify Sans",sans-serif';x.fillStyle='#5ef2ff';x.fillText(stat,Wc/2,820);
+  x.drawImage(R_IDLE,170,820,14*9,16*9);x.drawImage(GEM,Wc-290,850,9*12,9*12);
+  x.fillStyle='#fff';x.fillRect(420,960,320,4);x.fillRect(Wc-740,960,320,4);
+  x.font='30px "Pixelify Sans",sans-serif';x.fillStyle='#fff';
+  const dd=new Date();x.fillText(pad2(dd.getDate())+'/'+pad2(dd.getMonth()+1)+'/'+dd.getFullYear(),580,945);x.fillText(save.teacher||'Teacher',Wc-580,945);
+  x.font='24px "Pixelify Sans",sans-serif';x.fillStyle='#9aa6c8';x.fillText('DATE',580,995);x.fillText((save.school?save.school+' · ':'')+'TEACHER',Wc-580,995);
+  certName=('Certificate_'+playerName+'_'+(kind==='level'?'Level'+(li+1):'All')+'.png').replace(/[^A-Za-z0-9_.-]+/g,'_');
+  c.toBlob(b=>{certBlob=b;const img=$('certImg');if(img.dataset.url)URL.revokeObjectURL(img.dataset.url);const u=URL.createObjectURL(b);img.dataset.url=u;img.src=u;
+    const canSave=!!dl||!inClaude;$('bCertSave').classList.toggle('hide',!canSave);$('bCertSave').disabled=false;
+    $('certNote').textContent=canSave?'':'Right-click or long-press the picture to save it.';
+    showScreen('sCert');},'image/png');
+}
+$('bCertSave').addEventListener('click',()=>{if(!certBlob)return;
+  if(!dl){if(inClaude)return;const a=document.createElement('a');a.href=$('certImg').src;a.download=certName;document.body.appendChild(a);a.click();a.remove();$('certNote').textContent='✓ Certificate downloaded!';return}$('bCertSave').disabled=true;
+  dl.save({filename:certName,data:certBlob}).then(()=>{$('certNote').textContent='✓ Certificate saved!'}).catch(e=>{const c=e&&e.code;
+    $('certNote').textContent=c==='declined'?'Download cancelled.':c==='rate_limited'?'Please wait a moment, then try again.':c==='host_unavailable'?'This app cannot save files. Open the game in a browser or on a computer to download.':'Download is not available here. Right-click or long-press the picture to save it.';
+    if(c==='host_unavailable'||c==='unavailable')$('bCertSave').classList.add('hide')}).finally(()=>{$('bCertSave').disabled=false})});
+$('bCertBack').addEventListener('click',()=>showScreen(certBack));
+$('bCertAll').addEventListener('click',()=>openCert('all','sSelect'));
+$('bBoard').addEventListener('click',()=>{renderBoard();showScreen('sBoard');loadScriptBoard()});
+$('bBoardBack').addEventListener('click',()=>{renderSelect();showScreen('sSelect')});
+$('bTeacher').addEventListener('click',()=>{$('fSchool').value=save.school||'';$('fTeacher').value=save.teacher||'';$('bUnlock').textContent='Unlock all levels';updateTeacher();showScreen('sTeacher')});
+$('bTeachBack').addEventListener('click',()=>{renderSelect();showScreen('sSelect')});
+$('fSchool').addEventListener('input',e=>{save.school=e.target.value.slice(0,40);persist()});
+$('fTeacher').addEventListener('input',e=>{save.teacher=e.target.value.slice(0,40);persist()});
+$('bSync').addEventListener('click',()=>flushSheet(true));
+
+const CL=window.claude;
+if(!inClaude&&viaScript){loadScriptBoard();if(save.pending.length)flushSheet(false)}
+if(inClaude){
+  CL.use('mcp').then(m=>{mcp=m;updateTeacher()}).catch(()=>{});
+  CL.use('downloads').then(d=>{dl=d}).catch(()=>{});
+  CL.use('db').then(async d=>{if(!d)return;db=d;
+    try{const u=await CL.use('user');uid=u?await u.id():null}catch(e){uid=null}
+    const t=setTimeout(()=>{boardMsg='The shared leaderboard can’t be reached yet — showing this device.';renderBoard()},10000);
+    db.collection('scores').onSnapshot(snap=>{if(!snap.metadata.fromCache){clearTimeout(t);boardMsg=''}
+      const r={};snap.docs.forEach(doc=>{const v=doc.data();if(v&&v.players&&typeof v.players==='object')r[doc.id]=v.players});
+      remote=r;boardLive=true;renderBoard()},()=>{clearTimeout(t);boardLive=false;boardMsg='';renderBoard()});
+    if(uid&&Object.values(save.players).some(v=>v.best.some(b=>b>0)))pushBoard();
+  }).catch(()=>{});
+}
+updateTeacher();renderBoard();
+setMuteBtn();fit();requestAnimationFrame(frame);
+}
+</script>
+</body>
+</html>
